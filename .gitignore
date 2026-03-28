@@ -1,0 +1,44 @@
+# Data (too large for git)
+data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+*.sif
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Large model caches
+.cache/
+
+# Old intermediate results (superseded by ablation_final.csv and streaming_final_*.npy)
+results/ablation_etth1.csv
+results/ablation_results.csv
+results/ablation_v2.csv
+results/streaming_ECL.npy
+results/streaming_ETTh1.npy
+results/streaming_Weather.npy
+figures/ablation_heatmap.*
+figures/relative_improvement.*
+figures/retrieval_efficiency.*
+figures/streaming_learning_curve.*
+
+# Eval logs
+eval_*.log
