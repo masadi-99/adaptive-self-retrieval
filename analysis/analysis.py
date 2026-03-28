@@ -32,7 +32,7 @@ def plot_improvement_bars():
         vals = []
         for ds in datasets:
             bl = df[(df.dataset==ds)&(df.pred_len==h)&(df.method=='baseline')]['mse'].values
-            en = df[(df.dataset==ds)&(df.pred_len==h)&(df.method=='ensemble_bw2')]['mse'].values
+            en = df[(df.dataset==ds)&(df.pred_len==h)&(df.method=='dense_ens_bw2')]['mse'].values
             if len(bl)>0 and len(en)>0:
                 vals.append((bl[0]-en[0])/bl[0]*100)
             else:
@@ -160,7 +160,7 @@ def print_latex_table():
         row_en = f"{ds} (ASR)"
         for h in [96, 192, 336, 720]:
             bl = df[(df.dataset==ds)&(df.pred_len==h)&(df.method=='baseline')]['mse'].values[0]
-            en = df[(df.dataset==ds)&(df.pred_len==h)&(df.method=='ensemble_bw2')]['mse'].values[0]
+            en = df[(df.dataset==ds)&(df.pred_len==h)&(df.method=='dense_ens_bw2')]['mse'].values[0]
             if bl <= en:
                 row_bl += f" & \\textbf{{{bl:.2f}}}"
                 row_en += f" & {en:.2f}"
