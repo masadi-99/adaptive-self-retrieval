@@ -1,0 +1,22 @@
+
+ETTh1 H=96
+  Native  (512d): +6.76%
+  Funct.  (256d): +10.02%
+  Delta: +3.26pp (functional wins)
+
+ETTm1 H=96
+  Native  (512d): +4.18%
+  Funct.  (256d): +3.25%
+  Delta: -0.93pp (native wins)
+
+ETTm2 H=96
+  Native  (512d): +4.65%
+  Funct.  (256d): +1.81%
+  Delta: -2.84pp (native wins)
+
+Weather H=96
+  Native  (512d): +8.33%
+  Funct.  (256d): +3.71%
+  Delta: -4.62pp (native wins)
+
+Saved results/functional_vs_native.csv

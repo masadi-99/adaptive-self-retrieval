@@ -11,7 +11,7 @@ def crps_quantile(q_levels, q_forecasts, actual):
     score = 0.0
     for i, tau in enumerate(q_levels):
         err = actual - q_forecasts[i]
-        score += np.mean(2 * np.abs(err) * (tau - (err < 0).astype(float)))
+        score += np.mean(np.where(err >= 0, 2 * tau * err, -2 * (1 - tau) * err))
     return score / len(q_levels)
 
 def build_kb(data, ws, pl, stride=64):

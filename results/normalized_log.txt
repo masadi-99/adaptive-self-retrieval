@@ -1,0 +1,55 @@
+  Norm: ETTh1 H=96
+    base=0.0855 RCAF=0.0797 (+6.76%)
+  Norm: ETTh1 H=192
+    base=0.0918 RCAF=0.0883 (+3.80%)
+  Norm: ETTh1 H=336
+    base=0.1155 RCAF=0.1062 (+8.07%)
+  Norm: ETTh1 H=720
+    base=0.1211 RCAF=0.1189 (+1.77%)
+  ETTh1 avg: +5.01%
+  Norm: ETTm1 H=96
+    base=0.0330 RCAF=0.0316 (+4.18%)
+  Norm: ETTm1 H=192
+    base=0.0506 RCAF=0.0474 (+6.28%)
+  Norm: ETTm1 H=336
+    base=0.0873 RCAF=0.0818 (+6.27%)
+  Norm: ETTm1 H=720
+    base=0.1197 RCAF=0.1101 (+7.98%)
+  ETTm1 avg: +6.74%
+  Norm: ETTm2 H=96
+    base=0.1152 RCAF=0.1099 (+4.65%)
+  Norm: ETTm2 H=192
+    base=0.1685 RCAF=0.1595 (+5.36%)
+  Norm: ETTm2 H=336
+    base=0.2851 RCAF=0.2668 (+6.44%)
+  Norm: ETTm2 H=720
+    base=0.3477 RCAF=0.3229 (+7.13%)
+  ETTm2 avg: +6.28%
+  Norm: Weather H=96
+    base=0.0009 RCAF=0.0009 (+8.33%)
+  Norm: Weather H=192
+    base=0.0012 RCAF=0.0011 (+9.09%)
+  Norm: Weather H=336
+    base=0.0015 RCAF=0.0014 (+6.69%)
+  Norm: Weather H=720
+    base=0.0019 RCAF=0.0017 (+7.86%)
+  Weather avg: +7.89%
+  Norm: ECL H=96
+    base=0.1644 RCAF=0.1596 (+2.95%)
+  Norm: ECL H=192
+    base=0.2032 RCAF=0.1957 (+3.67%)
+  Norm: ECL H=336
+    base=0.2195 RCAF=0.2034 (+7.32%)
+  Norm: ECL H=720
+    base=0.2580 RCAF=0.2521 (+2.28%)
+  ECL avg: +4.06%
+
+===========================================================================
+TS-RAG vs RCAF (normalized MSE)
+===========================================================================
+DS           TS-RAG Δ     RCAF Δ
+ETTh1           +9.3%      +5.0%
+ETTm1          +17.1%      +6.7%
+ETTm2          +25.4%      +6.3%
+Weather        +19.3%      +7.9%
+ECL            +43.1%      +4.1%

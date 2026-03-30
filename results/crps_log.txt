@@ -12,13 +12,13 @@
     200/244
     220/244
     240/244
-    Base CRPS=0.1411  RCAF CRPS=0.0745  (+47.18%)
+    Base CRPS=1.9673  RCAF CRPS=1.9957  (-1.45%)
 
   CRPS: ETTm2 H=336
     20/69
     40/69
     60/69
-    Base CRPS=-0.1898  RCAF CRPS=-0.2158  (-13.70%)
+    Base CRPS=3.2569  RCAF CRPS=3.3483  (-2.81%)
 
   CRPS: Weather H=96
     20/104
@@ -26,26 +26,26 @@
     60/104
     80/104
     100/104
-    Base CRPS=-0.5589  RCAF CRPS=-0.3822  (+31.62%)
+    Base CRPS=5.4133  RCAF CRPS=5.5118  (-1.82%)
 
   CRPS: Weather H=336
     20/29
-    Base CRPS=-1.4885  RCAF CRPS=-0.9809  (+34.11%)
+    Base CRPS=7.9491  RCAF CRPS=8.2719  (-4.06%)
 
   CRPS: ETTh1 H=96
     20/57
     40/57
-    Base CRPS=-0.2382  RCAF CRPS=-0.2289  (+3.88%)
+    Base CRPS=1.3056  RCAF CRPS=1.3323  (-2.04%)
 
   CRPS: ETTh1 H=336
-    Base CRPS=-0.0801  RCAF CRPS=-0.0086  (+89.28%)
+    Base CRPS=1.6986  RCAF CRPS=1.7715  (-4.29%)
 
   CRPS: ECL H=96
     20/49
     40/49
-    Base CRPS=-9.3972  RCAF CRPS=-10.8907  (-15.89%)
+    Base CRPS=103.1000  RCAF CRPS=107.2740  (-4.05%)
 
   CRPS: ECL H=336
-    Base CRPS=-13.8929  RCAF CRPS=-24.1163  (-73.59%)
+    Base CRPS=123.3153  RCAF CRPS=130.9525  (-6.19%)
 
 Saved results/crps_results.csv

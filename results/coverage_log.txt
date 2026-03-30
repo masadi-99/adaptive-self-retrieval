@@ -1,0 +1,34 @@
+
+  Coverage: ETTm2 H=96
+    80% PI: base=66.4%  RCAF=58.1%  (target=80%)
+
+  Coverage: ETTm2 H=336
+    80% PI: base=51.6%  RCAF=43.6%  (target=80%)
+
+  Coverage: Weather H=96
+    80% PI: base=68.9%  RCAF=59.1%  (target=80%)
+
+  Coverage: Weather H=336
+    80% PI: base=48.8%  RCAF=41.4%  (target=80%)
+
+  Coverage: ETTh1 H=96
+    80% PI: base=73.2%  RCAF=63.0%  (target=80%)
+
+  Coverage: ETTh1 H=336
+    80% PI: base=54.2%  RCAF=44.7%  (target=80%)
+
+  Coverage: ECL H=96
+    80% PI: base=75.5%  RCAF=61.7%  (target=80%)
+
+  Coverage: ECL H=336
+    80% PI: base=62.2%  RCAF=49.9%  (target=80%)
+
+Summary:
+  ETTm2 H=96: 66.4% → 58.1% [Base closer]
+  ETTm2 H=336: 51.6% → 43.6% [Base closer]
+  Weather H=96: 68.9% → 59.1% [Base closer]
+  Weather H=336: 48.8% → 41.4% [Base closer]
+  ETTh1 H=96: 73.2% → 63.0% [Base closer]
+  ETTh1 H=336: 54.2% → 44.7% [Base closer]
+  ECL H=96: 75.5% → 61.7% [Base closer]
+  ECL H=336: 62.2% → 49.9% [Base closer]

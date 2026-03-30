@@ -1,0 +1,32 @@
+
+  Gate: ETTm2 H=96
+
+  Gate: Weather H=96
+
+  Gate: ETTh1 H=96
+
+  Gate: ECL H=96
+
+============================================================
+CONSENSUS GATE ANALYSIS
+============================================================
+
+  ETTm2 (n=244): r(agreement, improvement)=+0.022
+    High-agr: avg imp=+4.17%, win rate=74%
+    Low-agr:  avg imp=+2.49%, win rate=60%
+    Gap: +1.68pp
+
+  Weather (n=104): r(agreement, improvement)=+0.293
+    High-agr: avg imp=+6.57%, win rate=69%
+    Low-agr:  avg imp=+0.29%, win rate=65%
+    Gap: +6.28pp
+
+  ETTh1 (n=57): r(agreement, improvement)=+0.246
+    High-agr: avg imp=+4.81%, win rate=69%
+    Low-agr:  avg imp=+3.44%, win rate=68%
+    Gap: +1.37pp
+
+  ECL (n=49): r(agreement, improvement)=-0.110
+    High-agr: avg imp=-2.23%, win rate=40%
+    Low-agr:  avg imp=-1.31%, win rate=50%
+    Gap: -0.92pp
