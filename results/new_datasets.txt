@@ -1,0 +1,77 @@
+Model loaded. dim=512
+
+Exchange H=96
+  KB: 86 entries (15s)
+    10/10
+  Eval: 314s
+  baseline            : MSE=      0.0013 ( +0.00%)
+  dense_bw2           : MSE=      0.0011 (+14.37%) ***
+  rcaf                : MSE=      0.0013 ( -0.34%)
+  rcaf_cgpf_only      : MSE=      0.0012 ( +5.67%) ***
+  rcaf_crc_only       : MSE=      0.0014 ( -6.15%)
+
+Exchange H=192
+  KB: 84 entries (19s)
+    5/5
+  Eval: 468s
+  baseline            : MSE=      0.0023 ( +0.00%)
+  dense_bw2           : MSE=      0.0025 ( -8.93%)
+  rcaf                : MSE=      0.0022 ( +0.38%)
+  rcaf_cgpf_only      : MSE=      0.0022 ( +2.35%)
+  rcaf_crc_only       : MSE=      0.0023 ( -1.72%)
+
+Exchange H=336
+  KB: 82 entries (26s)
+    2/2
+  Eval: 412s
+  baseline            : MSE=      0.0052 ( +0.00%)
+  dense_bw2           : MSE=      0.0048 ( +8.64%) ***
+  rcaf                : MSE=      0.0050 ( +3.04%) ***
+  rcaf_cgpf_only      : MSE=      0.0049 ( +5.84%) ***
+  rcaf_crc_only       : MSE=      0.0053 ( -2.28%)
+
+Exchange H=720
+  KB: 76 entries (24s)
+    1/1
+  Eval: 485s
+  baseline            : MSE=      0.0185 ( +0.00%)
+  dense_bw2           : MSE=      0.0175 ( +5.42%) ***
+  rcaf                : MSE=      0.0182 ( +2.08%)
+  rcaf_cgpf_only      : MSE=      0.0183 ( +1.53%)
+  rcaf_crc_only       : MSE=      0.0184 ( +0.89%)
+
+ILI H=24
+  KB: 4 entries (1s)
+  Eval: 0s
+  baseline            : MSE=         nan (  +nan%)
+  dense_bw2           : MSE=         nan (  +nan%)
+  rcaf                : MSE=         nan (  +nan%)
+  rcaf_cgpf_only      : MSE=         nan (  +nan%)
+  rcaf_crc_only       : MSE=         nan (  +nan%)
+
+ILI H=36
+  KB: 4 entries (1s)
+  Eval: 0s
+  baseline            : MSE=         nan (  +nan%)
+  dense_bw2           : MSE=         nan (  +nan%)
+  rcaf                : MSE=         nan (  +nan%)
+  rcaf_cgpf_only      : MSE=         nan (  +nan%)
+  rcaf_crc_only       : MSE=         nan (  +nan%)
+
+ILI H=48
+  KB: 4 entries (1s)
+  Eval: 0s
+  baseline            : MSE=         nan (  +nan%)
+  dense_bw2           : MSE=         nan (  +nan%)
+  rcaf                : MSE=         nan (  +nan%)
+  rcaf_cgpf_only      : MSE=         nan (  +nan%)
+  rcaf_crc_only       : MSE=         nan (  +nan%)
+
+ILI H=60
+  KB: 4 entries (1s)
+  Eval: 0s
+  baseline            : MSE=         nan (  +nan%)
+  dense_bw2           : MSE=         nan (  +nan%)
+  rcaf                : MSE=         nan (  +nan%)
+  rcaf_cgpf_only      : MSE=         nan (  +nan%)
+  rcaf_crc_only       : MSE=         nan (  +nan%)

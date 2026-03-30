@@ -1,0 +1,25 @@
+
+############################################################
+# Model: timesfm
+############################################################
+ See https://github.com/google-research/timesfm/blob/master/README.md for updated APIs.
+Loaded PyTorch TimesFM, likely because python version is 3.11.15 | packaged by conda-forge | (main, Mar  5 2026, 16:38:11) [GCC 14.3.0].
+Fetching 3 files:   0%|          | 0/3 [00:00<?, ?it/s]Fetching 3 files: 100%|██████████| 3/3 [00:00<00:00, 1212.58it/s]
+  Loaded. embedding_dim=256
+
+  ETTh1 H=96...
+    20/57
+    40/57
+    baseline=9.2099, RCAF=7.9927 (+13.22%) [458s]
+
+  ETTh1 H=192...
+Traceback (most recent call last):
+  File "/home/masadi/adaptive-self-retrieval/src/evaluate_crossmodel.py", line 232, in <module>
+    run_crossmodel(a.data_dir, a.results_dir, a.device, a.datasets, a.models)
+  File "/home/masadi/adaptive-self-retrieval/src/evaluate_crossmodel.py", line 176, in run_crossmodel
+    base, rcaf_res = rcaf_eval(adapter, test, tv, 512, pl)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/masadi/adaptive-self-retrieval/src/evaluate_crossmodel.py", line 67, in rcaf_eval
+    base_mses.append(float(np.mean((med - gt)**2)))
+                                    ~~~~^~~~
+ValueError: operands could not be broadcast together with shapes (128,) (192,) 

@@ -1,0 +1,37 @@
+
+  Theory: ETTm2 H=96
+    30/244
+    60/244
+    90/244
+    120/244
+    150/244
+    180/244
+    210/244
+    240/244
+
+  Theory: Weather H=96
+    30/104
+    60/104
+    90/104
+
+  Theory: ETTh1 H=96
+    30/57
+
+============================================================
+THEORY VALIDATION RESULTS
+============================================================
+
+  ETTm2 (n=244 windows):
+    r(bias_error_corr, improvement) = +0.277  <- THEORY PREDICTION
+    r(uncertainty, improvement)      = -0.009
+    Mean bias_error_corr = 0.160
+
+  Weather (n=104 windows):
+    r(bias_error_corr, improvement) = +0.286  <- THEORY PREDICTION
+    r(uncertainty, improvement)      = -0.007
+    Mean bias_error_corr = 0.079
+
+  ETTh1 (n=57 windows):
+    r(bias_error_corr, improvement) = +0.313  <- THEORY PREDICTION
+    r(uncertainty, improvement)      = +0.239
+    Mean bias_error_corr = 0.086

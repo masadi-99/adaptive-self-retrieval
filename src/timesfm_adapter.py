@@ -33,18 +33,21 @@ class TimesFMAdapter:
         # result is (point_forecast, quantile_forecast)
         # point_forecast: (1, horizon_len), quantile: (1, horizon_len, num_quantiles)
         pred = result[0][0]  # (horizon_len,)
+        pred = pred.astype(np.float32)
         if len(pred) >= horizon:
-            return pred[:horizon].astype(np.float32)
+            return pred[:horizon]
         # Chain for longer horizons
-        full = list(pred)
+        full_pred = pred.tolist()
         ext = np.concatenate([ctx, pred])
-        while len(full) < horizon:
-            rem = horizon - len(full)
-            chunk_result = self.tfm.forecast([ext[-len(ctx):].astype(np.float32)], freq=[0])
-            chunk = chunk_result[0][0]
-            full.extend(chunk[:rem])
-            ext = np.concatenate([ext, chunk[:rem]])
-        return np.array(full[:horizon], dtype=np.float32)
+        while len(full_pred) < horizon:
+            rem = horizon - len(full_pred)
+            ctx_len = min(len(ctx), len(ext))
+            chunk_result = self.tfm.forecast([ext[-ctx_len:].astype(np.float32)], freq=[0])
+            chunk = chunk_result[0][0].astype(np.float32)
+            take = min(len(chunk), rem)
+            full_pred.extend(chunk[:take].tolist())
+            ext = np.concatenate([ext, chunk[:take]])
+        return np.array(full_pred[:horizon], dtype=np.float32)
 
     def extract_embedding(self, window: np.ndarray) -> np.ndarray:
         """Functional embedding: z-normalized forecasts at multiple offsets."""

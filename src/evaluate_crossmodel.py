@@ -170,7 +170,7 @@ def run_crossmodel(data_dir='./data', results_dir='./results', device='cuda',
             train, val, test, config = load_dataset(ds, data_dir)
             tv = np.concatenate([train, val])
 
-            for pl in [96]:  # Start with H=96 only for speed
+            for pl in config['prediction_lengths']:
                 print(f"\n  {ds} H={pl}...")
                 t0 = time.time()
                 base, rcaf_res = rcaf_eval(adapter, test, tv, 512, pl)

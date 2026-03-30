@@ -59,6 +59,18 @@ DATASET_CONFIGS = {
         'freq': 'h',
         'prediction_lengths': [96, 192, 336, 720],
     },
+    'Exchange': {
+        'file': 'exchange_rate/exchange_rate.csv',
+        'target': 'OT',
+        'freq': 'd',
+        'prediction_lengths': [96, 192, 336, 720],
+    },
+    'ILI': {
+        'file': 'illness/national_illness.csv',
+        'target': 'OT',
+        'freq': 'w',
+        'prediction_lengths': [24, 36, 48, 60],
+    },
 }
 
 
