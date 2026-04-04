@@ -6,3 +6,7 @@ ETTm2         +4.9%**      +1.1%     -5.9%*      +0.1%      -0.1%
 ETTh1         +7.3%**   +11.2%**   +13.9%**      -0.2%      +7.6%
 Weather       +8.5%**      +5.3%      +4.1%      +0.3%    +7.2%**
 ETTm1         +4.3%**      +2.3%      +0.4%      +0.0%      -0.3%
+ETTh2           +0.8%      +6.5%      -5.3%      +0.3%      +4.3%
+
+If Retrieved >> Random: retrieval carries genuine information
+If Retrieved ≈ Random: method is just input-perturbed ensembling
