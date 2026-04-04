@@ -1,0 +1,76 @@
+======================================================================
+EXP 1: VALIDATION-BASED HYPERPARAMETER SELECTION
+======================================================================
+  Val: k=3, beta=0.2: +2.05%
+  Val: k=3, beta=0.3: +2.50%
+  Val: k=3, beta=0.4: +2.56%
+  Val: k=5, beta=0.2: +2.61%
+  Val: k=5, beta=0.3: +3.40%
+  Val: k=5, beta=0.4: +3.85%
+  Val: k=7, beta=0.2: +2.31%
+  Val: k=7, beta=0.3: +2.97%
+  Val: k=7, beta=0.4: +3.29%
+  SELECTED: k=5, beta=0.4 (val imp=+3.85%)
+
+Test results with k=5, beta=0.4:
+  ETTh1      H= 96:   +7.8% (n=56, p=0.0314) **
+  ETTh1      H=192:  +12.0% (n=28, p=0.0531) 
+  ETTh1      H=336:   +7.5% (n=16, p=0.0940) 
+  ETTh1      H=720:   +3.5% (n=7, p=0.3592) 
+
+  ETTh2      H= 96:   +0.0% (n=56, p=0.9797) 
+  ETTh2      H=192:   -0.1% (n=28, p=0.9612) 
+  ETTh2      H=336:   -0.4% (n=16, p=0.8065) 
+  ETTh2      H=720:   -0.1% (n=7, p=0.9431) 
+
+  ETTm1      H= 96:   +4.3% (n=240, p=0.0006) ***
+  ETTm1      H=192:   +6.1% (n=120, p=0.0023) ***
+  ETTm1      H=336:   +2.7% (n=68, p=0.1544) 
+  ETTm1      H=720:   +4.6% (n=32, p=0.0956) 
+
+  ETTm2      H= 96:   +3.4% (n=240, p=0.0070) ***
+  ETTm2      H=192:   +3.6% (n=120, p=0.0366) **
+  ETTm2      H=336:   +6.3% (n=68, p=0.0043) ***
+  ETTm2      H=720:   +8.6% (n=32, p=0.0033) ***
+
+  Weather    H= 96:   +9.8% (n=104, p=0.0021) ***
+  Weather    H=192:  +11.5% (n=52, p=0.0115) **
+  Weather    H=336:   +7.3% (n=29, p=0.0141) **
+  Weather    H=720:   +7.5% (n=13, p=0.0766) 
+
+  ECL        H= 96:   -0.5% (n=49, p=0.9284) 
+  ECL        H=192:   -0.1% (n=24, p=0.9847) 
+  ECL        H=336:   +6.9% (n=14, p=0.4961) 
+  ECL        H=720:   +2.1% (n=6, p=0.8843) 
+
+  Traffic    H= 96:  -35.1% (n=31, p=0.0000) ***
+  Traffic    H=192:  -32.6% (n=15, p=0.0004) ***
+  Traffic    H=336:  -26.0% (n=8, p=0.0561) 
+  Traffic    H=720:  -11.5% (n=4, p=0.3238) 
+
+======================================================================
+EXP 2: k SENSITIVITY (cost-accuracy tradeoff)
+======================================================================
+  ETTm2 k=3: +3.8% (5x overhead)
+  ETTm2 k=5: +3.4% (7x overhead)
+  ETTm2 k=7: +4.8% (9x overhead)
+  Weather k=3: +7.7% (5x overhead)
+  Weather k=5: +9.8% (7x overhead)
+  Weather k=7: +9.8% (9x overhead)
+  ETTh1 k=3: +8.9% (5x overhead)
+  ETTh1 k=5: +7.8% (7x overhead)
+  ETTh1 k=7: +8.8% (9x overhead)
+
+======================================================================
+EXP 3: CONSENSUS RATE AS DEPLOYMENT PREDICTOR
+======================================================================
+  ETTh1     : imp=+7.8%, consensus=0.543, gate_rate=60.7%
+  ETTh2     : imp=+0.0%, consensus=0.514, gate_rate=57.4%
+  ETTm1     : imp=+4.3%, consensus=0.544, gate_rate=59.6%
+  ETTm2     : imp=+3.4%, consensus=0.577, gate_rate=64.9%
+  Weather   : imp=+9.8%, consensus=0.633, gate_rate=71.0%
+  ECL       : imp=-0.5%, consensus=0.578, gate_rate=62.9%
+  Traffic   : imp=-35.1%, consensus=0.918, gate_rate=93.7%
+
+Prediction rule: if avg_consensus > 0.45, deploy CGRC. Otherwise, skip.
+======================================================================
