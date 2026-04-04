@@ -1,0 +1,15 @@
+SPOTLIGHT: Spectral Classifier for Retrieval vs Random
+===========================================================================
+Dataset       SpectConc  Retrieved     Random     Winner  Predicted  Correct
+---------------------------------------------------------------------------
+ETTh1             0.605      +6.6%     +10.5%     random     random      YES
+ETTh2             0.668      +1.2%      +4.6%     random     random      YES
+ETTm1             0.347      +3.1%      +7.1%     random     random      YES
+ETTm2             0.352      +8.1%      +9.8%     random     random      YES
+Weather           0.448      +5.2%      +0.0%  retrieval     random       NO
+ECL               0.474      +2.1%     -13.2%  retrieval     random       NO
+Traffic           0.782     -36.7%    -101.8%  retrieval     random       NO
+Exchange          0.847      +9.1%      +2.4%  retrieval     random       NO
+
+Classifier accuracy: 50% (4/8)
+Threshold: spectral_concentration < 0.3 → retrieval; >= 0.3 → random

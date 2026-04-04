@@ -1,0 +1,21 @@
+MULTI-HORIZON KILLER EXPERIMENT
+============================================================
+DS             H  Retrieved     Random      Gap
+--------------------------------------------------
+ETTm2         96      +8.1%     +10.0%    -2.0pp RND
+ETTm2        192      +5.4%     +11.2%    -5.8pp RND
+ETTm2        336      +6.3%      +6.8%    -0.5pp TIE
+ETTh1         96      +6.6%     +10.5%    -3.9pp RND
+ETTh1        192     +10.5%     +15.1%    -4.6pp RND
+ETTh1        336      +6.7%     +13.6%    -6.9pp RND
+Weather       96      +5.2%      +0.1%    +5.1pp RET
+Weather      192     +10.9%      +8.3%    +2.6pp RET
+Weather      336      +6.4%      +8.2%    -1.8pp RND
+ETTm1         96      +3.1%      +7.4%    -4.3pp RND
+ETTm1        192      +4.3%      +0.9%    +3.4pp RET
+ETTm1        336      +1.2%      +5.2%    -3.9pp RND
+ETTh2         96      +1.2%      +4.3%    -3.1pp RND
+ETTh2        192      +1.4%      +5.9%    -4.5pp RND
+ETTh2        336      -0.2%      +6.4%    -6.6pp RND
+
+Saved results/killer_multihorizon.csv
