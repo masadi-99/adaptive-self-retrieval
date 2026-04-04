@@ -1,0 +1,15 @@
+FINAL METHOD: CGRC + CV Guard (CV < 0.35 → skip)
+Hyperparams fixed on ETTm2 val: k=5, beta=0.4
+=================================================================
+DS             CV  Guard     H=96    H=192    H=336    H=720      Avg
+-----------------------------------------------------------------
+ETTh1        0.54   CGRC    +7.8%   +12.0%    +7.5%    +3.5%    +7.7%
+ETTh2        0.43   CGRC    +0.0%    -0.1%    -0.4%    -0.1%    -0.1%
+ETTm1        0.54   CGRC    +4.3%    +6.1%    +2.7%    +4.6%    +4.4%
+ETTm2        0.43   CGRC    +3.4%    +3.6%    +6.3%    +8.6%    +5.5%
+Weather      0.93   CGRC    +9.8%   +11.5%    +7.3%    +7.5%    +9.0%
+ECL          0.16   SKIP    +0.0%    +0.0%    +0.0%    +0.0%    +0.0%
+Traffic      0.59   CGRC   -35.1%   -32.6%   -26.0%   -11.5%   -26.3%
+
+CV < 0.35: ECL (0.16) → skip. All others use CGRC.
+Traffic CV=0.59 still uses CGRC → degrades. Need higher threshold or different guard.
