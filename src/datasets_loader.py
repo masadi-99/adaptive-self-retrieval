@@ -14,32 +14,35 @@ DATASET_CONFIGS = {
         'target': 'OT',
         'freq': 'h',
         'prediction_lengths': [96, 192, 336, 720],
-        'train_end': 8544,
-        'val_end': 11425,
+        # Standard split: 12 months train, 4 months val, rest test
+        # 12*30*24=8640 train, 4*30*24=2880 val
+        'train_end': 8639,   # indices 0..8639 = 8640 points
+        'val_end': 11519,    # indices 8640..11519 = 2880 points
     },
     'ETTh2': {
         'file': 'ETT-small/ETTh2.csv',
         'target': 'OT',
         'freq': 'h',
         'prediction_lengths': [96, 192, 336, 720],
-        'train_end': 8544,
-        'val_end': 11425,
+        'train_end': 8639,
+        'val_end': 11519,
     },
     'ETTm1': {
         'file': 'ETT-small/ETTm1.csv',
         'target': 'OT',
         'freq': '15min',
         'prediction_lengths': [96, 192, 336, 720],
-        'train_end': 34176,
-        'val_end': 45695,
+        # 12*30*24*4=34560 train, 4*30*24*4=11520 val
+        'train_end': 34559,  # indices 0..34559 = 34560 points
+        'val_end': 46079,    # indices 34560..46079 = 11520 points
     },
     'ETTm2': {
         'file': 'ETT-small/ETTm2.csv',
         'target': 'OT',
         'freq': '15min',
         'prediction_lengths': [96, 192, 336, 720],
-        'train_end': 34176,
-        'val_end': 45695,
+        'train_end': 34559,
+        'val_end': 46079,
     },
     'Weather': {
         'file': 'weather/weather.csv',
