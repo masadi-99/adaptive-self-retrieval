@@ -1,0 +1,21 @@
+Runtime Analysis: RCAF Overhead (Chronos-Bolt-Small, NVIDIA GB10 GPU)
+
+Per-window inference time (ETTh1, H=96, ws=512):
+  Baseline (predict_with_uncertainty): 84.7ms
+  RCAF (full pipeline):              1251.1ms
+  Overhead:                           14.8x
+
+Breakdown:
+  Base forecast:     84.7ms (1 predict_with_uncertainty call)
+  Embedding:        ~42.3ms (1 extract_embedding call)
+  FAISS search:       <1ms  (k=7 L2 search over ~170 entries)
+  k=7 re-forecasts: ~593ms (7 predict_median calls on normalized windows)
+  CRC/CGPF math:      <1ms (numpy operations)
+
+The overhead is dominated by the k=7 re-forecasts.
+With k=3: estimated ~6x overhead.
+With k=1: estimated ~3x overhead.
+
+For comparison:
+  Training-based methods (TS-RAG, RAFT): require hours of training per dataset
+  RCAF: zero training, 14.8x inference overhead (amortizable via caching)

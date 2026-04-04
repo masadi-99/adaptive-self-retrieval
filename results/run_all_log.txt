@@ -1,0 +1,286 @@
+Model loaded. dim=512
+
+ETTh1 H=96
+  KB: 171 entries (9s)
+    20/56
+    40/56
+    56/56
+  Eval: 56 windows, 27s
+  baseline:    MSE=7.2587
+  dense_bw2:   MSE=6.7182 (+7.45%)
+  rcaf:        MSE=6.7215 (+7.40%)
+
+ETTh1 H=192
+  KB: 169 entries (2s)
+    20/28
+    28/28
+  Eval: 28 windows, 13s
+  baseline:    MSE=10.5007
+  dense_bw2:   MSE=9.6433 (+8.17%)
+  rcaf:        MSE=9.4657 (+9.86%)
+
+ETTh1 H=336
+  KB: 167 entries (2s)
+    16/16
+  Eval: 16 windows, 20s
+  baseline:    MSE=12.1008
+  dense_bw2:   MSE=10.9245 (+9.72%)
+  rcaf:        MSE=11.3170 (+6.48%)
+
+ETTh1 H=720
+  KB: 161 entries (1s)
+    7/7
+  Eval: 7 windows, 23s
+  baseline:    MSE=10.5020
+  dense_bw2:   MSE=10.5060 (-0.04%)
+  rcaf:        MSE=10.1475 (+3.38%)
+
+ETTh2 H=96
+  KB: 171 entries (7s)
+    20/56
+    40/56
+    56/56
+  Eval: 56 windows, 31s
+  baseline:    MSE=31.6413
+  dense_bw2:   MSE=31.0801 (+1.77%)
+  rcaf:        MSE=31.4932 (+0.47%)
+
+ETTh2 H=192
+  KB: 169 entries (9s)
+    20/28
+    28/28
+  Eval: 28 windows, 18s
+  baseline:    MSE=35.0732
+  dense_bw2:   MSE=35.2778 (-0.58%)
+  rcaf:        MSE=35.1612 (-0.25%)
+
+ETTh2 H=336
+  KB: 167 entries (7s)
+    16/16
+  Eval: 16 windows, 20s
+  baseline:    MSE=42.4063
+  dense_bw2:   MSE=44.5176 (-4.98%)
+  rcaf:        MSE=42.3174 (+0.21%)
+
+ETTh2 H=720
+  KB: 161 entries (6s)
+    7/7
+  Eval: 7 windows, 30s
+  baseline:    MSE=44.3871
+  dense_bw2:   MSE=45.0916 (-1.59%)
+  rcaf:        MSE=43.9620 (+0.96%)
+
+ETTm1 H=96
+  KB: 711 entries (21s)
+    20/240
+    40/240
+    60/240
+    80/240
+    100/240
+    120/240
+    140/240
+    160/240
+    180/240
+    200/240
+    220/240
+    240/240
+  Eval: 240 windows, 210s
+  baseline:    MSE=2.8246
+  dense_bw2:   MSE=2.7020 (+4.34%)
+  rcaf:        MSE=2.7067 (+4.17%)
+
+ETTm1 H=192
+  KB: 709 entries (20s)
+    20/120
+    40/120
+    60/120
+    80/120
+    100/120
+    120/120
+  Eval: 120 windows, 210s
+  baseline:    MSE=4.3120
+  dense_bw2:   MSE=4.0263 (+6.63%)
+  rcaf:        MSE=4.0341 (+6.45%)
+
+ETTm1 H=336
+  KB: 707 entries (19s)
+    20/68
+    40/68
+    60/68
+    68/68
+  Eval: 68 windows, 203s
+  baseline:    MSE=6.5165
+  dense_bw2:   MSE=6.3633 (+2.35%)
+  rcaf:        MSE=6.2733 (+3.73%)
+
+ETTm1 H=720
+  KB: 701 entries (17s)
+    20/32
+    32/32
+  Eval: 32 windows, 184s
+  baseline:    MSE=9.4661
+  dense_bw2:   MSE=9.3438 (+1.29%)
+  rcaf:        MSE=8.9460 (+5.49%)
+
+ETTm2 H=96
+  KB: 711 entries (21s)
+    20/240
+    40/240
+    60/240
+    80/240
+    100/240
+    120/240
+    140/240
+    160/240
+    180/240
+    200/240
+    220/240
+    240/240
+  Eval: 240 windows, 378s
+  baseline:    MSE=15.6782
+  dense_bw2:   MSE=15.3430 (+2.14%)
+  rcaf:        MSE=14.9505 (+4.64%)
+
+ETTm2 H=192
+  KB: 709 entries (37s)
+    20/120
+    40/120
+    60/120
+    80/120
+    100/120
+    120/120
+  Eval: 120 windows, 175s
+  baseline:    MSE=22.9295
+  dense_bw2:   MSE=22.7483 (+0.79%)
+  rcaf:        MSE=21.6974 (+5.37%)
+
+ETTm2 H=336
+  KB: 707 entries (41s)
+    20/68
+    40/68
+    60/68
+    68/68
+  Eval: 68 windows, 98s
+  baseline:    MSE=32.8514
+  dense_bw2:   MSE=32.2332 (+1.88%)
+  rcaf:        MSE=30.8834 (+5.99%)
+
+ETTm2 H=720
+  KB: 701 entries (35s)
+    20/32
+    32/32
+  Eval: 32 windows, 102s
+  baseline:    MSE=49.8581
+  dense_bw2:   MSE=45.2722 (+9.20%)
+  rcaf:        MSE=44.8546 (+10.04%)
+
+Weather H=96
+  KB: 650 entries (28s)
+    20/104
+    40/104
+    60/104
+    80/104
+    100/104
+    104/104
+  Eval: 104 windows, 150s
+  baseline:    MSE=139.1301
+  dense_bw2:   MSE=132.9083 (+4.47%)
+  rcaf:        MSE=127.5465 (+8.33%)
+
+Weather H=192
+  KB: 648 entries (23s)
+    20/52
+    40/52
+    52/52
+  Eval: 52 windows, 25s
+  baseline:    MSE=180.8718
+  dense_bw2:   MSE=163.5639 (+9.57%)
+  rcaf:        MSE=164.4276 (+9.09%)
+
+Weather H=336
+  KB: 646 entries (19s)
+    20/29
+    29/29
+  Eval: 29 windows, 30s
+  baseline:    MSE=225.2286
+  dense_bw2:   MSE=213.4654 (+5.22%)
+  rcaf:        MSE=210.1654 (+6.69%)
+
+Weather H=720
+  KB: 640 entries (19s)
+    13/13
+  Eval: 13 windows, 27s
+  baseline:    MSE=278.3976
+  dense_bw2:   MSE=267.5630 (+3.89%)
+  rcaf:        MSE=256.5207 (+7.86%)
+
+ECL H=96
+  KB: 320 entries (3s)
+    20/49
+    40/49
+    49/49
+  Eval: 49 windows, 15s
+  baseline:    MSE=50539.9862
+  dense_bw2:   MSE=55034.8306 (-8.89%)
+  rcaf:        MSE=49047.7432 (+2.95%)
+
+ECL H=192
+  KB: 318 entries (3s)
+    20/24
+    24/24
+  Eval: 24 windows, 11s
+  baseline:    MSE=62465.1201
+  dense_bw2:   MSE=65729.9605 (-5.23%)
+  rcaf:        MSE=60171.0168 (+3.67%)
+
+ECL H=336
+  KB: 316 entries (11s)
+    14/14
+  Eval: 14 windows, 13s
+  baseline:    MSE=67473.4768
+  dense_bw2:   MSE=68718.4816 (-1.85%)
+  rcaf:        MSE=62531.5319 (+7.32%)
+
+ECL H=720
+  KB: 310 entries (2s)
+    6/6
+  Eval: 6 windows, 12s
+  baseline:    MSE=79309.5542
+  dense_bw2:   MSE=87408.2021 (-10.21%)
+  rcaf:        MSE=77498.9634 (+2.28%)
+
+Traffic H=96
+  KB: 210 entries (2s)
+    20/31
+    31/31
+  Eval: 31 windows, 10s
+  baseline:    MSE=0.0000
+  dense_bw2:   MSE=0.0001 (-45.32%)
+  rcaf:        MSE=0.0000 (-10.35%)
+
+Traffic H=192
+  KB: 209 entries (2s)
+    15/15
+  Eval: 15 windows, 7s
+  baseline:    MSE=0.0000
+  dense_bw2:   MSE=0.0001 (-41.91%)
+  rcaf:        MSE=0.0000 (-8.65%)
+
+Traffic H=336
+  KB: 207 entries (2s)
+    8/8
+  Eval: 8 windows, 7s
+  baseline:    MSE=0.0000
+  dense_bw2:   MSE=0.0001 (-38.46%)
+  rcaf:        MSE=0.0000 (-0.63%)
+
+Traffic H=720
+  KB: 201 entries (2s)
+    4/4
+  Eval: 4 windows, 8s
+  baseline:    MSE=0.0001
+  dense_bw2:   MSE=0.0001 (-14.91%)
+  rcaf:        MSE=0.0001 (+7.77%)
+
+Saved ../results/ablation_final.csv (84 rows)
+Saved ../results/paired_ttests.txt (28 tests)
