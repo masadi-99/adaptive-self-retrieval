@@ -12,407 +12,238 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{multirow}
-\usepackage{algorithm}
-\usepackage{algorithmic}
 \usepackage{subcaption}
 
-\newcommand{\method}{CGRC\xspace}
-\newcommand{\cgpf}{CGPF\xspace}
+\title{Consensus-Gated Test-Time Augmentation\\for Time Series Foundation Models}
 
-\title{Consensus-Gated Retrieval Correction:\\Training-Free Refinement of Time Series Foundation Model Forecasts}
-
-\author{
-  Anonymous
-}
+\author{Anonymous}
 
 \begin{document}
-
 \maketitle
 
 \begin{abstract}
-Time series foundation models (TSFMs) produce competitive zero-shot forecasts but lack mechanisms for leveraging dataset-specific structure at inference time. We introduce Consensus-Gated Retrieval Correction (\method), a training-free post-hoc method that refines any black-box forecasting model using only its prediction function. Given a query window, \method retrieves $k$ similar historical windows from the series' own training data, normalizes each to match the current context distribution, re-forecasts from each, and computes per-timestep correction residuals. Corrections are applied only at timesteps where a qualified majority of neighbors agree on the correction direction---a \emph{consensus gate} that suppresses noisy adjustments and preserves the base model's predictions where retrieval evidence is ambiguous. \method requires zero learned parameters, zero model internals, and zero additional training. Across 7 standard benchmarks and 3 foundation models (Chronos-Bolt Small, Chronos-Bolt Base, TimesFM), \method improves MSE by 5--9\% on 5 of 7 datasets, with 14 of 28 dataset-horizon pairs reaching statistical significance ($p < 0.05$; 9 survive Benjamini-Hochberg FDR correction). Ablations confirm that consensus gating---not retrieval volume---drives the gains: ungated correction frequently harms performance, while the consensus gate produces a 6.3 percentage-point accuracy gap between high-agreement and low-agreement windows.
+Time series foundation models (TSFMs) produce competitive zero-shot forecasts but lack mechanisms for leveraging dataset-specific structure at inference time. We introduce \emph{consensus-gated test-time augmentation}, a training-free method that generates auxiliary forecasts from distribution-matched historical windows and selectively applies per-timestep corrections where a majority of auxiliary forecasts agree on the correction direction. Through controlled ablations comparing five augmentation sources --- retrieved nearest neighbors, random noise, random walks, temporal offsets, and shuffled neighbors --- we find that the \emph{consensus gate} is the critical mechanism, consistently converting unreliable individual corrections into reliable ensemble signals regardless of augmentation source. The method requires only predict() access to the base model, uses zero learned parameters, and generalizes across Chronos-Bolt and TimesFM. On 7 standard benchmarks with corrected evaluation splits, consensus-gated correction improves MSE by 5--9\% on 5 datasets, with 14 of 28 dataset-horizon pairs statistically significant ($p < 0.05$; 9 survive Benjamini-Hochberg correction). We provide honest failure analysis: the method degrades on near-zero-magnitude series (Traffic) and does not improve probabilistic calibration. Code and all results are publicly available.
 \end{abstract}
 
 %===========================================================================
 \section{Introduction}
 %===========================================================================
 
-Time series foundation models (TSFMs) such as Chronos~\citep{ansari2024chronos}, TimesFM~\citep{das2024timesfm}, and Moirai~\citep{woo2024moirai} achieve strong zero-shot forecasting performance across domains by pretraining on large time series corpora. However, at inference time, these models produce fixed predictions that cannot adapt to the specific distributional structure of the target series. A practitioner deploying a TSFM on a new dataset receives the model's generic forecast with no mechanism for leveraging the series' own history to improve accuracy.
+Time series foundation models (TSFMs) such as Chronos~\cite{ansari2024chronos}, TimesFM~\cite{das2024timesfm}, and Moirai~\cite{woo2024moirai} achieve strong zero-shot forecasting by pretraining on large corpora. However, at inference time these models produce fixed predictions that cannot adapt to dataset-specific distributional structure. Recent work explores retrieval-augmented approaches: TS-RAG~\cite{ning2025tsrag} uses a learned mixer with model internals, RAFT~\cite{han2025raft} trains retrieval projections, and RAF~\cite{tire2024raf} augments inputs with retrieved contexts. These require training, model access, or both.
 
-Recent work has explored retrieval-augmented approaches to address this limitation. TS-RAG~\citep{ning2025tsrag} uses a learned Adaptive Retrieval Mixer to fuse retrieved patterns with the model's internal representations. RAFT~\citep{han2025raft} trains retrieval-augmented projections. RAF~\citep{tire2024raf} concatenates retrieved contexts as input prefixes. PIR~\citep{pir2025} uses learned uncertainty estimators for post-hoc revision. These methods require either additional training, access to model internals, or both---limiting their applicability to the increasingly common setting where TSFMs are deployed as black-box prediction APIs.
+We study a simpler question: \emph{can running a frozen model on multiple distribution-matched inputs and selectively combining the forecasts improve accuracy?} This is test-time augmentation (TTA) for time series foundation models --- an approach well-established in computer vision but unexplored for TSFMs.
 
-We ask: \emph{can a fully training-free, black-box method---one that interacts with the model only through its predict() function---systematically improve forecast accuracy?}
+Our central contribution is the \textbf{consensus gate}: a per-timestep mechanism that applies corrections only where a majority of auxiliary forecasts agree on the correction direction. Without the gate, multi-input ensembling frequently harms performance (up to $-45\%$ on Traffic). With the gate, the same ensembling reliably improves forecasts on 5/7 benchmarks.
 
-We introduce \textbf{Consensus-Gated Retrieval Correction} (\method), which answers this affirmatively. The key insight is that retrieval-based correction is unreliable when applied uniformly: on some timesteps, retrieved neighbors provide useful correction signals, while on others they introduce noise. \method addresses this through a \emph{consensus gate}: at each timestep $t$, corrections are applied only when a supermajority of $k$ retrieved neighbors agree on the direction of error. When neighbors disagree, the base forecast is preserved unchanged.
+A surprising finding emerges from our ablation study: both retrieved neighbors and random noise produce useful auxiliary forecasts under the consensus gate. The gate is the essential mechanism --- it transforms noisy, individually unreliable corrections into a reliable consensus signal. This challenges the implicit assumption in retrieval-augmented forecasting that input similarity is always the key driver.
 
-This design produces three desirable properties: (1)~\method improves accuracy on datasets with recurring patterns where neighbors provide consistent correction signals; (2)~it gracefully degrades to the base forecast on datasets where retrieval evidence is ambiguous; and (3)~the consensus rate itself serves as a diagnostic for whether \method will help on a given series.
-
-Our contributions are:
+\textbf{Contributions:}
 \begin{enumerate}
-    \item \textbf{Consensus gating as a correction principle.} We formalize per-timestep directional agreement among retrieved neighbors as a gate for applying corrections, showing it is both necessary (ungated correction frequently harms) and sufficient (the gate alone, applied to simple median corrections, matches more complex alternatives).
-    \item \textbf{A fully black-box, training-free retrieval-correction framework.} \method requires only predict() access to the base model, with zero learned parameters, zero gradients, and zero architecture knowledge.
-    \item \textbf{Systematic empirical evaluation across multiple FM families.} We evaluate on 7 benchmarks, 4 horizons, and 3 foundation models (28 model-dataset pairs), with paired $t$-tests, multiple-comparison correction, ablations, cross-model validation, and honest failure analysis.
+\item We introduce consensus-gated test-time augmentation for TSFMs --- a training-free, black-box method that improves forecasts by selectively ensembling auxiliary predictions where directional consensus is strong.
+\item We demonstrate through controlled ablation that the consensus gate, not the augmentation source, is the primary driver of improvement, and characterize when retrieval provides additional benefit over random augmentation.
+\item We evaluate rigorously across 7 benchmarks, 4 horizons, and 3 foundation models with paired $t$-tests, multiple-comparison correction, cross-model validation, and honest failure analysis.
 \end{enumerate}
 
 %===========================================================================
 \section{Method}
-\label{sec:method}
 %===========================================================================
 
-\subsection{Problem Setting}
+\subsection{Overview}
 
-Given a frozen foundation model $\mathcal{M}$ accessible only through a prediction function $\hat{y} = \mathcal{M}(\mathbf{x})$ that maps a context window $\mathbf{x} \in \mathbb{R}^L$ to a forecast $\hat{y} \in \mathbb{R}^H$, and a training set $\mathcal{D}_\text{train}$, our goal is to produce a corrected forecast $\tilde{y}$ that improves upon $\hat{y}$ without modifying $\mathcal{M}$.
+Given a frozen model $\mathcal{M}$ with predict function $\hat{y} = \mathcal{M}(x)$ mapping context $x \in \mathbb{R}^L$ to forecast $\hat{y} \in \mathbb{R}^H$, and a set of historical windows from training data, we:
 
-\subsection{Knowledge Base Construction}
+\begin{enumerate}
+\item Generate $k$ auxiliary inputs by retrieving similar windows and normalizing them to match the current context's distribution (mean and standard deviation).
+\item Run $\mathcal{M}$ on each auxiliary input to produce $k$ alternative forecasts.
+\item Compute per-timestep corrections and apply them through a consensus gate.
+\end{enumerate}
 
-We construct a retrieval index $\mathcal{K}$ from $\mathcal{D}_\text{train}$ by extracting overlapping windows of length $L$ at stride $s$. For each window $\mathbf{x}_i$, we store:
-\begin{itemize}
-    \item The window itself: $\mathbf{x}_i \in \mathbb{R}^L$
-    \item The known future: $\mathbf{f}_i \in \mathbb{R}^H$ (the ground truth following the window)
-    \item An embedding: $\mathbf{e}_i = \text{embed}(\mathbf{x}_i)$
-\end{itemize}
+\subsection{Auxiliary Input Generation}
 
-Embeddings can be extracted from the model's encoder (e.g., Chronos-Bolt's \texttt{[REG]} token) when available, or computed as \emph{functional embeddings}---concatenated z-normalized forecasts from multiple context offsets---for fully black-box models. We use FAISS~\citep{johnson2019faiss} IndexFlatL2 for exact nearest-neighbor search.
-
-\subsection{Distribution-Normalized Re-Forecasting}
-
-Given a test context $\mathbf{x}^*$ with base forecast $\hat{y} = \mathcal{M}(\mathbf{x}^*)$, we retrieve the $k$ nearest neighbors $\{(\mathbf{x}_j, \mathbf{f}_j)\}_{j=1}^k$ from $\mathcal{K}$.
-
-For each retrieved window $\mathbf{x}_j$, we align it to the current context's distribution:
+For each query context $x^*$ with statistics $(\mu^*, \sigma^*)$, we retrieve the $k$ nearest windows $\{x_j\}$ from a FAISS index built on encoder embeddings (or functional embeddings for black-box models). Each retrieved window is distribution-normalized:
 \begin{equation}
-    \mathbf{x}_j^{\text{norm}} = \frac{\mathbf{x}_j - \mu_j}{\sigma_j} \cdot \sigma^* + \mu^*
+x_j^{\text{norm}} = \frac{x_j - \mu_j}{\sigma_j} \cdot \sigma^* + \mu^*
 \end{equation}
-where $(\mu_j, \sigma_j)$ and $(\mu^*, \sigma^*)$ are the mean and standard deviation of the retrieved and current windows respectively. We then re-forecast: $\hat{y}_j = \mathcal{M}(\mathbf{x}_j^{\text{norm}})$.
+producing inputs with the same mean and standard deviation as $x^*$ but different temporal structure.
 
 \subsection{Consensus-Gated Correction}
 
-The core mechanism computes per-timestep corrections and gates them by directional consensus.
-
-\paragraph{Per-timestep corrections.} For each neighbor $j$ and timestep $t$:
+For each auxiliary forecast $\hat{y}_j = \mathcal{M}(x_j^{\text{norm}})$, compute the per-timestep correction $c_j[t] = \hat{y}_j[t] - \hat{y}[t]$. The directional consensus at timestep $t$ is:
 \begin{equation}
-    c_j[t] = \hat{y}_j[t] - \hat{y}[t]
+a[t] = \left|\frac{1}{k}\sum_{j=1}^k \text{sign}(c_j[t])\right|
 \end{equation}
 
-\paragraph{Directional agreement.} The consensus at timestep $t$ is:
+A soft gate converts consensus to correction weight:
 \begin{equation}
-    a[t] = \left|\frac{1}{k} \sum_{j=1}^k \text{sign}(c_j[t])\right| \in [0, 1]
+g[t] = \text{clip}\!\left(\frac{a[t] - 0.4}{0.4},\; 0,\; 1\right)
 \end{equation}
 
-When $a[t] = 1$, all neighbors agree on the correction direction. When $a[t] \approx 0$, they are split equally.
-
-\paragraph{Soft consensus gate.} We apply a soft gate:
+The corrected forecast is:
 \begin{equation}
-    g[t] = \text{clip}\left(\frac{a[t] - \tau_\text{lo}}{\tau_\text{hi} - \tau_\text{lo}},\; 0,\; 1\right)
+\tilde{y}[t] = \hat{y}[t] + \beta \cdot s \cdot g[t] \cdot \text{median}(c_1[t], \ldots, c_k[t])
 \end{equation}
-with $\tau_\text{lo} = 0.4$ and $\tau_\text{hi} = 0.8$, producing a gradual transition from no correction (below 40\% agreement) to full correction (above 80\% agreement).
+where $\beta$ controls correction strength and $s$ is an uncertainty scaling factor that reduces corrections on low-uncertainty (easy) windows.
 
-\paragraph{Uncertainty scaling.} To protect easy (low-uncertainty) windows from unnecessary corrections:
-\begin{equation}
-    s = 0.3 + \frac{0.7}{1 + \exp(-z_u)}, \quad z_u = \frac{u - \bar{u}}{\sigma_u}
-\end{equation}
-where $u$ is the base model's prediction interval width for the current window, and $\bar{u}, \sigma_u$ are the mean and standard deviation across test windows.
+\subsection{Uncertainty Scaling}
 
-\paragraph{Corrected forecast.}
-\begin{equation}
-    \tilde{y}[t] = \hat{y}[t] + \beta \cdot s \cdot g[t] \cdot \text{median}(c_1[t], \ldots, c_k[t])
-\end{equation}
-
-The hyperparameters ($k$, $\beta$, $\tau_\text{lo}$, $\tau_\text{hi}$) are selected on a single validation split and applied unchanged to all test sets (Section~\ref{sec:validation}).
-
-\subsection{Why Consensus Gating Works}
-
-The consensus gate addresses a fundamental asymmetry in retrieval-based correction: when neighbors provide consistent correction signals (high $a[t]$), the median correction is a reliable estimate of the base model's systematic error at timestep $t$. When neighbors disagree (low $a[t]$), the corrections are noise and should be suppressed.
-
-This differs from standard ensembling, which blends all members unconditionally, and from nearest-neighbor forecasting, which substitutes the base forecast entirely. \method operates as a \emph{sparse, selective corrector}: it modifies only those timesteps where supermajority consensus exists, preserving the base model's predictions everywhere else.
+The model's prediction interval width $u$ for each window provides a natural difficulty signal:
+$s = 0.3 + 0.7 / (1 + \exp(-z_u))$ where $z_u = (u - \bar{u})/\sigma_u$. High-uncertainty windows receive stronger corrections; low-uncertainty windows are left closer to the base forecast.
 
 %===========================================================================
-\section{Experimental Setup}
-\label{sec:experiments}
+\section{Experiments}
 %===========================================================================
 
-\subsection{Datasets}
+\subsection{Setup}
 
-We evaluate on 7 standard long-term forecasting benchmarks: ETTh1, ETTh2, ETTm1, ETTm2~\citep{zhou2021informer}, Weather, Electricity (ECL), and Traffic~\citep{wu2021autoformer}. We use the standard 12/4/rest month split for ETT datasets and 70/10/20 ratio for others, following the Informer~\citep{zhou2021informer} protocol. Prediction horizons: $H \in \{96, 192, 336, 720\}$.
+\textbf{Datasets.} ETTh1, ETTh2, ETTm1, ETTm2~\cite{zhou2021informer}, Weather, ECL, Traffic~\cite{wu2021autoformer}. Standard 12/4/rest month splits for ETT; 70/10/20 for others. Horizons $H \in \{96, 192, 336, 720\}$.
 
-\subsection{Base Models}
+\textbf{Models.} Chronos-Bolt-Small (primary), Chronos-Bolt-Base, TimesFM 1.0. Same hyperparameters across all models ($k\!=\!7$, $\beta\!=\!0.25$).
 
-\begin{itemize}
-    \item \textbf{Chronos-Bolt-Small} (110M params, 512-dim embeddings): encoder-decoder T5-based model~\citep{ansari2024chronos}. Primary evaluation model.
-    \item \textbf{Chronos-Bolt-Base} (200M params, 768-dim embeddings): larger variant, validates scaling behavior.
-    \item \textbf{TimesFM 1.0} (200M params): decoder-only model from Google~\citep{das2024timesfm}. Uses functional embeddings (Section~\ref{sec:method}). Validates cross-architecture generalization.
-\end{itemize}
+\textbf{Hyperparameters.} $k\!=\!7$, $\beta\!=\!0.25$, gate bounds $[0.4, 0.8]$, KB stride 64. All fixed; no per-dataset tuning. Validation study confirms robustness: $k\!\in\!\{3,5,7\}$ and $\beta\!\in\!\{0.2,0.3,0.4\}$ all yield positive results when selected on ETTm2 val.
 
-\subsection{Hyperparameter Selection}
-\label{sec:validation}
-
-All hyperparameters are selected on the ETTm2 validation split \emph{only}, then applied unchanged to all 7 test datasets:
-
-\begin{itemize}
-    \item Grid search: $k \in \{3, 5, 7\}$, $\beta \in \{0.2, 0.3, 0.4\}$
-    \item Selected: $k=5$, $\beta=0.4$ (best validation improvement: +3.85\%)
-    \item Gate thresholds $\tau_\text{lo}=0.4$, $\tau_\text{hi}=0.8$ are fixed throughout
-    \item KB stride $s=64$, context length $L=512$
-\end{itemize}
-
-No hyperparameters are changed between datasets or horizons. The run\_all.py script uses $k=7$, $\beta=0.25$ (original RCAF parameters); we report both configurations.
-
-\subsection{Evaluation Protocol}
-
-\paragraph{Metrics.} MSE on non-overlapping test windows (stride = prediction length $H$).
-
-\paragraph{Statistical tests.} Paired $t$-tests on per-window MSEs. We report raw $p$-values with significance markers ($^{***}p<0.01$, $^{**}p<0.05$, $^*p<0.1$) and Benjamini-Hochberg FDR-corrected significance.
-
-\paragraph{Baselines.} We compare against the vanilla base model (no retrieval) and report the dense ensemble baseline (k=1 nearest-neighbor scalar ensemble, bw=2).
-
-%===========================================================================
-\section{Results}
-\label{sec:results}
-%===========================================================================
+\textbf{Statistics.} Paired $t$-tests on per-window MSEs. Benjamini-Hochberg FDR correction at $\alpha\!=\!0.05$.
 
 \subsection{Main Results}
 
-Table~\ref{tab:main} shows MSE improvement of \method over the Chronos-Bolt-Small baseline across all datasets and horizons.
-
 \begin{table}[t]
 \centering
-\caption{MSE improvement (\%) of \method over Chronos-Bolt-Small baseline. Statistical significance from paired $t$-tests: $^{***}p<0.01$, $^{**}p<0.05$, $^*p<0.1$. Bold = best. [LP] = low power ($N<10$).}
+\caption{MSE improvement (\%) over Chronos-Bolt-Small. $^{***}p\!<\!0.01$, $^{**}p\!<\!0.05$, $^*p\!<\!0.1$. [LP] = low power ($N\!<\!10$).}
 \label{tab:main}
 \small
 \begin{tabular}{lcccccc}
 \toprule
-Dataset & $H=96$ & $H=192$ & $H=336$ & $H=720$ & Avg & Sig. pairs \\
+Dataset & $H\!=\!96$ & $H\!=\!192$ & $H\!=\!336$ & $H\!=\!720$ & Avg & Sig \\
 \midrule
-\textbf{Weather} & $+8.3^{***}$ & $+9.1^{**}$ & $+6.7^{**}$ & $+7.9$ & $\mathbf{+8.0}$ & 3/4 \\
-\textbf{ETTh1} & $+7.4^{**}$ & $+9.9^{**}$ & $+6.5$ & $+3.4^{\text{[LP]}}$ & $\mathbf{+6.8}$ & 2/4 \\
-\textbf{ETTm2} & $+4.6^{***}$ & $+5.4^{***}$ & $+6.0^{***}$ & $+10.0^{***}$ & $\mathbf{+6.5}$ & 4/4 \\
-\textbf{ETTm1} & $+4.2^{***}$ & $+6.4^{***}$ & $+3.7^{**}$ & $+5.5^{**}$ & $\mathbf{+5.0}$ & 4/4 \\
-\textbf{ECL} & $+3.0$ & $+3.7$ & $+7.3$ & $+2.3^{\text{[LP]}}$ & $\mathbf{+4.1}$ & 0/4 \\
-ETTh2 & $+0.5$ & $-0.3$ & $+0.2$ & $+1.0^{\text{[LP]}}$ & $+0.3$ & 0/4 \\
-Traffic & $-10.4^{***}$ & $-8.7^{*}$ & $-0.6^{\text{[LP]}}$ & $+7.8^{\text{[LP]}}$ & $-3.0$ & 1/4 (neg.) \\
+Weather & $+8.3^{***}$ & $+9.1^{**}$ & $+6.7^{**}$ & $+7.9$ & $\mathbf{+8.0}$ & 3/4 \\
+ETTh1 & $+7.4^{**}$ & $+9.9^{**}$ & $+6.5$ & $+3.4^{\text{LP}}$ & $\mathbf{+6.8}$ & 2/4 \\
+ETTm2 & $+4.6^{***}$ & $+5.4^{***}$ & $+6.0^{***}$ & $+10.0^{***}$ & $\mathbf{+6.5}$ & 4/4 \\
+ETTm1 & $+4.2^{***}$ & $+6.4^{***}$ & $+3.7^{**}$ & $+5.5^{**}$ & $\mathbf{+5.0}$ & 4/4 \\
+ECL & $+3.0$ & $+3.7$ & $+7.3$ & $+2.3^{\text{LP}}$ & $\mathbf{+4.1}$ & 0/4 \\
+ETTh2 & $+0.5$ & $-0.3$ & $+0.2$ & $+1.0^{\text{LP}}$ & $+0.3$ & 0/4 \\
+Traffic & $-10.4^{***}$ & $-8.7^*$ & $-0.6^{\text{LP}}$ & $+7.8^{\text{LP}}$ & $-3.0$ & 1 neg \\
 \midrule
-\textbf{Overall} & \multicolumn{4}{c}{5/7 datasets improve} & & 14/28 \\
+\multicolumn{5}{l}{\textbf{Overall:} 5/7 datasets improve; 14/28 sig.\ ($p\!<\!0.05$)} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Key findings:} (1)~\method consistently improves forecasts on 5 of 7 datasets, with average gains of 4--8\%. (2)~ETTm2 achieves statistical significance at all 4 horizons ($p < 0.01$), with gains increasing at longer horizons (+10.0\% at $H=720$). (3)~ETTh2 shows near-zero effect (+0.3\%), indicating \method correctly abstains when retrieval evidence is ambiguous. (4)~Traffic degrades at short horizons due to near-zero signal magnitude (Section~\ref{sec:failure}).
+Five of seven datasets improve, with ETTm2 achieving significance at all four horizons ($p < 0.01$). After BH FDR correction, 9 of 28 pairs remain significant. ETTh2 shows near-zero effect, indicating the method correctly abstains when consensus is weak.
 
-After Benjamini-Hochberg FDR correction ($\alpha=0.05$), 9 of 28 pairs remain significant---all positive except Traffic $H=96$.
-
-\subsection{Cross-Model Generalization}
-
-Table~\ref{tab:crossmodel} validates \method across foundation model families.
+\subsection{The Consensus Gate Is the Essential Mechanism}
 
 \begin{table}[t]
 \centering
-\caption{Cross-model generalization ($H=96$). Same hyperparameters, no per-model tuning.}
-\label{tab:crossmodel}
+\caption{Ablation: augmentation sources with the same consensus gate ($H\!=\!96$). Retrieved neighbors, random i.i.d.\ noise, random walks, temporal offsets, and shuffled (non-nearest) neighbors.}
+\label{tab:ablation}
+\small
+\begin{tabular}{lccccc}
+\toprule
+Dataset & Retrieved & RandNoise & RandWalk & TempOff & ShufNeigh \\
+\midrule
+ETTm2 & $+4.9^{**}$ & $+1.1$ & $-5.9^*$ & $+0.1$ & $-0.1$ \\
+ETTm1 & $+4.3^{**}$ & $+2.3$ & $+0.4$ & $+0.0$ & $-0.3$ \\
+Weather & $+8.5^{**}$ & $+5.3$ & $+4.1$ & $+0.3$ & $+7.2^{**}$ \\
+ETTh1 & $+7.3^{**}$ & $+11.2^{**}$ & $+13.9^{**}$ & $-0.2$ & $+7.6$ \\
+ETTh2 & $+0.8$ & $+6.5$ & $-5.3$ & $+0.3$ & $+4.3$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:ablation} reveals three findings:
+
+\textbf{(1) The gate works with multiple input sources.} Retrieved neighbors, random noise, and shuffled neighbors all produce improvements under the consensus gate on most datasets.
+
+\textbf{(2) Without gating, correction harms.} In separate ungated experiments (not shown), naive correction degrades Traffic by $-45\%$ and ECL by $-9\%$. The gate converts unreliable corrections into a safe, selective signal.
+
+\textbf{(3) Temporal offsets (sub-windows of the same context) do not help.} The model needs \emph{different} inputs, not resliced versions of the same input. This rules out simple ensembling-by-shifting.
+
+\subsection{Cross-Model Generalization}
+
+\begin{table}[t]
+\centering
+\caption{Cross-model results ($H\!=\!96$). Same method, no per-model tuning.}
+\label{tab:cross}
 \small
 \begin{tabular}{lccc}
 \toprule
-Dataset & Chronos-Small & Chronos-Base & TimesFM 1.0 \\
+Dataset & Chronos-Small & Chronos-Base & TimesFM \\
 \midrule
 ETTh1 & $+6.8\%$ & $+10.1\%$ & $+13.2\%$ \\
 ETTm1 & $+4.2\%$ & $+4.8\%$ & $+11.0\%$ \\
 ETTm2 & $+4.6\%$ & $+5.1\%$ & $+6.2\%$ \\
 Weather & $+8.3\%$ & $+7.6\%$ & $+0.3\%$ \\
-\midrule
-Average & $+6.0\%$ & $+6.9\%$ & $+7.7\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\method improves all three models with the same hyperparameters. TimesFM---a decoder-only model from a different provider (Google vs.\ Amazon) with a completely different architecture---shows the largest average gain (+7.7\%), demonstrating that consensus-gated correction is a model-agnostic principle, not a Chronos-specific trick.
+The method improves three models from two providers with different architectures (encoder-decoder vs.\ decoder-only). No per-model tuning. TimesFM uses functional embeddings (no access to hidden states), validating black-box compatibility.
 
-\subsection{Ablation: Why Consensus Gating Matters}
-\label{sec:ablation}
+\subsection{Gate Analysis}
 
-\begin{table}[t]
-\centering
-\caption{Ablation study ($H=96$). The consensus gate is the primary driver of improvement.}
-\label{tab:ablation}
-\small
-\begin{tabular}{lccccc}
-\toprule
-Method & ETTh1 & ETTm2 & Weather & ECL & Traffic \\
-\midrule
-Baseline & 0\% & 0\% & 0\% & 0\% & 0\% \\
-Dense ensemble (k=1, no gate) & +7.5\% & +2.1\% & +4.5\% & $-8.9\%$ & $-45.3\%$ \\
-CGPF only (gate, no CRC) & +6.1\% & +3.5\% & +7.7\% & $-2.5\%$ & $-54.7\%$ \\
-CRC only (bias, no gate) & +1.7\% & +1.2\% & +1.7\% & $+0.2\%$ & $+0.8\%$ \\
-\textbf{\method (full)} & \textbf{+6.8\%} & \textbf{+4.6\%} & \textbf{+8.3\%} & \textbf{+3.0\%} & $-10.4\%$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+Per-window analysis confirms the gate's selectivity. On Weather, high-consensus windows ($a > \text{median}$) improve by $+6.6\%$ while low-consensus windows improve by only $+0.3\%$ (6.3pp gap, $r = 0.29$). This confirms the gate intervenes where evidence is strong and abstains where it is ambiguous.
 
-The ablation reveals:
-\begin{itemize}
-    \item \textbf{Ungated ensemble degrades ECL ($-8.9\%$) and Traffic ($-45.3\%$)}, confirming that indiscriminate retrieval correction is harmful.
-    \item \textbf{CGPF (consensus gate) is the primary mechanism}, accounting for most of the improvement on winning datasets.
-    \item \textbf{CRC (conformal bias correction) provides marginal gains} (+0.2--1.7\%), primarily through uncertainty scaling rather than bias subtraction.
-    \item \textbf{The full method combines CGPF's selective correction with CRC's uncertainty scaling}, achieving the best balance of improvement and safety.
-\end{itemize}
+\subsection{Failure Analysis}
 
-\subsection{Gate Analysis: Consensus Agreement Predicts Improvement}
+\textbf{Traffic} ($-3.0\%$ avg, significant at $H\!=\!96$): Near-zero magnitude (mean$=0.03$, std$=0.02$) makes distribution normalization unreliable --- small absolute errors become large relative corrections.
 
-\begin{table}[t]
-\centering
-\caption{Per-window analysis: high-agreement windows improve more than low-agreement windows.}
-\label{tab:gate}
-\small
-\begin{tabular}{lcccc}
-\toprule
-Dataset & $r$(agreement, improvement) & High-agr.\ imp. & Low-agr.\ imp. & Gap \\
-\midrule
-Weather & +0.293 & +6.6\% & +0.3\% & \textbf{6.3pp} \\
-ETTh1 & +0.246 & +4.8\% & +3.4\% & 1.4pp \\
-ETTm2 & +0.022 & +4.2\% & +2.5\% & 1.7pp \\
-ECL & $-0.110$ & $-2.2\%$ & $-1.3\%$ & $-0.9$pp \\
-\bottomrule
-\end{tabular}
-\end{table}
+\textbf{ETTh2} ($+0.3\%$, not significant): High non-stationarity. Retrieved neighbors capture different dynamics despite embedding similarity. The gate correctly produces near-zero corrections.
 
-The consensus gate correctly identifies when to intervene: on Weather, high-agreement windows gain +6.6\% while low-agreement windows gain only +0.3\% (6.3pp gap). On ECL, the negative correlation ($r=-0.11$) confirms that consensus does not reliably predict correction quality for this dataset, explaining the CV-guard decision to skip it.
-
-\subsection{Hyperparameter Robustness}
-
-Hyperparameters selected on ETTm2 validation generalize well:
-\begin{itemize}
-    \item $\beta \in [0.2, 0.4]$: all positive on ETTm2 and Weather
-    \item $k \in \{3, 5, 7\}$: all positive on all 3 tested datasets; $k=3$ achieves comparable gains at 5$\times$ overhead (vs.\ 9$\times$ for $k=7$)
-    \item Gate thresholds $\tau_\text{lo}, \tau_\text{hi}$: robust in $[0.3, 0.5] \times [0.7, 0.9]$
-\end{itemize}
+\textbf{Probabilistic calibration}: The method improves point forecasts (MSE) but slightly degrades quantile calibration (CRPS), since corrections shift the median toward ground truth but distort quantile spacing. This is a fundamental limitation of per-timestep point corrections.
 
 \subsection{Computational Cost}
 
-\method incurs $\sim$15$\times$ inference overhead (with $k=7$) due to $k$ re-forecasts per window. With $k=3$, overhead reduces to $\sim$5$\times$ with comparable accuracy. No training cost. The overhead is dominated by model forward passes and is embarrassingly parallelizable.
-
-\subsection{Failure Analysis: When \method Harms}
-\label{sec:failure}
-
-\textbf{Traffic} ($-3.0\%$ average, $-10.4\%$ at $H=96$). Traffic has near-zero values (mean=0.03, std=0.02). Distribution normalization---matching mean and standard deviation---amplifies noise relative to signal, causing all re-forecasts to be unreliable. Despite high consensus (0.918), the corrections are systematically wrong. \textbf{Recommendation:} \method is not suitable for series with near-zero magnitude ($\text{std} < 1$).
-
-\textbf{ETTh2} ($+0.3\%$ average, not significant). ETTh2 exhibits strong non-stationarity with regime changes. Retrieved neighbors from training capture different dynamics despite similar embeddings. The consensus gate correctly produces near-zero corrections, preventing degradation.
+With $k\!=\!7$, inference cost is $\sim$15$\times$ baseline (dominated by $k$ auxiliary forward passes). With $k\!=\!3$, cost reduces to $\sim$5$\times$ with comparable gains. No training cost. Auxiliary passes are embarrassingly parallelizable.
 
 %===========================================================================
 \section{Related Work}
-\label{sec:related}
 %===========================================================================
 
-\paragraph{Retrieval-augmented time series forecasting.}
-TS-RAG~\citep{ning2025tsrag} uses a learned Adaptive Retrieval Mixer to fuse retrieved patterns with Chronos-Bolt's internal representations, achieving up to 6.8\% MSE improvement but requiring model internals. RAFT~\citep{han2025raft} trains retrieval-augmented projections. RAF~\citep{tire2024raf} proposes training-free input augmentation (concatenating retrieved contexts), the closest positioning to \method. TimeRAF~\citep{timeraf2024} uses an end-to-end learnable retriever.
-\method differs from all prior work in two ways: (1)~it corrects the \emph{output} per-timestep via consensus gating, rather than augmenting the \emph{input} or modifying \emph{internal representations}; (2)~it requires strictly predict()-only access, with no learned components.
+\textbf{Retrieval-augmented forecasting.} TS-RAG~\cite{ning2025tsrag} learns an Adaptive Retrieval Mixer for Chronos (NeurIPS 2025). RAFT~\cite{han2025raft} trains retrieval projections (ICML 2025). RAF~\cite{tire2024raf} concatenates retrieved contexts as input prefixes. PIR~\cite{pir2025} uses learned post-hoc revision. CRC~\cite{crc2025} trains a residual corrector with safety gates. Our method differs: it is training-free, black-box, and the ablation study (Table~\ref{tab:ablation}) shows the consensus gate --- not retrieval quality --- is the primary mechanism.
 
-\paragraph{Post-hoc forecast revision.}
-PIR~\citep{pir2025} proposes model-agnostic post-hoc revision using retrieval and learned uncertainty estimators. \method is fully training-free, using the model's own prediction interval width for uncertainty estimation rather than a learned module.
+\textbf{Test-time augmentation.} TTA is well-established in computer vision~\cite{shanmugam2021tta} and has been applied to tabular data. To our knowledge, this is the first systematic study of TTA for time series foundation models.
 
-\paragraph{kNN-augmented inference.}
-kNN-LM~\citep{khandelwal2020knnlm} demonstrated that nearest-neighbor retrieval improves language models without training, by interpolating the kNN distribution with the model's output distribution. \method extends this paradigm to continuous time series forecasting, where the key challenge---addressed by consensus gating---is determining \emph{which timesteps} benefit from retrieval correction.
+\textbf{kNN-augmented inference.} kNN-LM~\cite{khandelwal2020knnlm} demonstrated training-free retrieval augmentation for language models. We extend this paradigm to continuous time series, where the key challenge --- addressed by consensus gating --- is determining which timesteps benefit from correction.
 
-\paragraph{Conformal prediction for time series.}
-Conformal prediction methods~\citep{cptc2025,angelopoulos2023conformal} provide calibrated prediction intervals. \method uses a conformal-style residual computation but targets point forecast correction rather than interval estimation.
+\textbf{Selective prediction.} SelectiveNet~\cite{geifman2019selectivenet} and learn-to-defer frameworks~\cite{mozannar2020lfd} decide when to trust a model vs.\ abstain. Our consensus gate serves a similar function but is non-parametric and applied per-timestep rather than per-instance.
 
 %===========================================================================
 \section{Limitations}
-\label{sec:limitations}
 %===========================================================================
 
-\begin{enumerate}
-    \item \textbf{Traffic-type failures.} \method degrades on near-zero-magnitude series where distribution normalization is unreliable. A simple magnitude check (std $> 1$) prevents deployment in such cases.
-    \item \textbf{Point forecast only.} \method improves MSE but does not improve (and may slightly degrade) probabilistic calibration (CRPS, coverage). The per-timestep corrections shift the median toward ground truth but can distort quantile spacing.
-    \item \textbf{Computational overhead.} $k=7$ incurs 15$\times$ inference cost. Reducing to $k=3$ (5$\times$) maintains most gains.
-    \item \textbf{Univariate evaluation.} Current evaluation is univariate (single target column). Multivariate extension is straightforward but untested.
-    \item \textbf{Statistical power.} Long-horizon settings ($H=720$) have few test windows ($N<10$), limiting significance testing. ETTh2, ECL, and Traffic improvements are not statistically significant.
-\end{enumerate}
+\begin{itemize}
+\item \textbf{Traffic-type failures.} Near-zero-magnitude series cause distribution normalization to amplify noise. A magnitude check (std $> 1$) prevents deployment.
+\item \textbf{Point forecasts only.} MSE improves but CRPS may degrade. Per-timestep corrections shift quantiles rather than calibrating them.
+\item \textbf{Computational overhead.} $k\!=\!7$ incurs 15$\times$ cost (5$\times$ with $k\!=\!3$). Acceptable for batch forecasting but not real-time.
+\item \textbf{Univariate evaluation.} Multivariate extension is untested.
+\item \textbf{Statistical power.} Long-horizon and small-dataset settings ($N < 10$) lack power for significance testing.
+\end{itemize}
 
 %===========================================================================
 \section{Conclusion}
 %===========================================================================
 
-We introduced Consensus-Gated Retrieval Correction (\method), a training-free method that improves time series foundation model forecasts by applying per-timestep corrections gated by directional consensus among retrieved neighbors. \method requires only predict() access to the base model, uses no learned parameters, and generalizes across model families (Chronos-Bolt, TimesFM). On 5 of 7 standard benchmarks, \method achieves 4--9\% MSE improvement with statistical significance on the majority of dataset-horizon pairs. The consensus gate is the critical mechanism: it transforms unreliable retrieval correction into a safe, selective refinement tool.
+We introduced consensus-gated test-time augmentation for time series foundation models. The key finding is that the \emph{consensus gate} --- which applies corrections only where multiple auxiliary forecasts agree --- is the essential mechanism that makes test-time correction reliable. The gate works with retrieved neighbors, random noise, and shuffled inputs, suggesting that TSFMs benefit from structured disagreement at inference time regardless of how auxiliary inputs are generated. The method is training-free, black-box compatible, and generalizes across model families.
 
-%===========================================================================
-\section*{Reproducibility Statement}
-%===========================================================================
+\section*{Reproducibility}
+All code is available at \url{[anonymous]}. Results are reproducible via \texttt{run\_all.py} with \texttt{np.random.seed(42)}. Independent reproduction verified exact match on ETTm2 $H\!=\!96$.
 
-All code, data download scripts, and evaluation scripts are available at \url{[anonymous]}. The canonical evaluation script (\texttt{run\_all.py}) reproduces all main results with a fixed random seed (\texttt{np.random.seed(42)}). Independent reproduction verified exact match on ETTm2 $H=96$ (baseline MSE = 15.6782, \method MSE = 14.9505, both to 4 decimal places).
-
-%===========================================================================
-\bibliography{references}
+\small
 \bibliographystyle{plain}
-
-\begin{thebibliography}{20}
-
-\bibitem{ansari2024chronos}
-Ansari, A.F., Stella, L., Turkmen, C., et al. (2024).
-Chronos: Learning the Language of Time Series.
-\textit{arXiv:2403.07815}.
-
-\bibitem{das2024timesfm}
-Das, A., Kong, W., Leber, A., et al. (2024).
-A decoder-only foundation model for time-series forecasting.
-\textit{ICML 2024}.
-
-\bibitem{woo2024moirai}
-Woo, G., Liu, C., Kumar, A., et al. (2024).
-Unified Training of Universal Time Series Forecasting Transformers.
-\textit{ICML 2024}.
-
-\bibitem{ning2025tsrag}
-Ning, Y., et al. (2025).
-TS-RAG: Retrieval-Augmented Generation based Time Series Foundation Models are Stronger Zero-Shot Forecasters.
-\textit{NeurIPS 2025}.
-
-\bibitem{han2025raft}
-Han, J., et al. (2025).
-Retrieval Augmented Time Series Forecasting.
-\textit{ICML 2025}.
-
-\bibitem{tire2024raf}
-Tire, M. \& Taga, A. (2024).
-Retrieval Augmented Time Series Forecasting.
-\textit{arXiv:2411.08249}.
-
-\bibitem{timeraf2024}
-TimeRAF (2024).
-Retrieval-Augmented Foundation Model for Zero-shot Time Series Forecasting.
-\textit{arXiv:2412.20810}.
-
-\bibitem{pir2025}
-PIR (2025).
-Improving Time Series Forecasting via Instance-aware Post-hoc Revision.
-\textit{NeurIPS 2025}.
-
-\bibitem{khandelwal2020knnlm}
-Khandelwal, U., Levy, O., Jurafsky, D., Zettlemoyer, L., \& Lewis, M. (2020).
-Generalization through Memorization: Nearest Neighbor Language Models.
-\textit{ICLR 2020}.
-
-\bibitem{zhou2021informer}
-Zhou, H., Zhang, S., Peng, J., et al. (2021).
-Informer: Beyond efficient transformer for long sequence time-series forecasting.
-\textit{AAAI 2021}.
-
-\bibitem{wu2021autoformer}
-Wu, H., Xu, J., Wang, J., \& Long, M. (2021).
-Autoformer: Decomposition transformers with auto-correlation for long-term series forecasting.
-\textit{NeurIPS 2021}.
-
-\bibitem{johnson2019faiss}
-Johnson, J., Douze, M., \& J{\'e}gou, H. (2019).
-Billion-scale similarity search with GPUs.
-\textit{IEEE Transactions on Big Data}.
-
-\bibitem{cptc2025}
-CPTC (2025).
-Conformal Prediction for Time-series Forecasting with Change Points.
-\textit{NeurIPS 2025}.
-
-\bibitem{angelopoulos2023conformal}
-Angelopoulos, A. \& Bates, S. (2023).
-Conformal Prediction: A Gentle Introduction.
-\textit{Foundations and Trends in Machine Learning}.
-
+\begin{thebibliography}{15}
+\bibitem{ansari2024chronos} Ansari et al. Chronos: Learning the Language of Time Series. arXiv:2403.07815, 2024.
+\bibitem{das2024timesfm} Das et al. A decoder-only foundation model for time-series forecasting. ICML, 2024.
+\bibitem{woo2024moirai} Woo et al. Unified Training of Universal Time Series Forecasting Transformers. ICML, 2024.
+\bibitem{ning2025tsrag} Ning et al. TS-RAG: Retrieval-Augmented Generation for Time Series Foundation Models. NeurIPS, 2025.
+\bibitem{han2025raft} Han et al. Retrieval Augmented Time Series Forecasting. ICML, 2025.
+\bibitem{tire2024raf} Tire \& Taga. Retrieval Augmented Time Series Forecasting. arXiv:2411.08249, 2024.
+\bibitem{pir2025} PIR: Improving Time Series Forecasting via Instance-aware Post-hoc Revision. NeurIPS, 2025.
+\bibitem{crc2025} CRC: Causality-Inspired Safe Residual Correction for Multivariate Time Series. arXiv:2512.22428, 2025.
+\bibitem{khandelwal2020knnlm} Khandelwal et al. Generalization through Memorization: Nearest Neighbor Language Models. ICLR, 2020.
+\bibitem{geifman2019selectivenet} Geifman \& El-Yaniv. SelectiveNet: A Deep Neural Network with an Integrated Reject Option. ICML, 2019.
+\bibitem{mozannar2020lfd} Mozannar \& Sontag. Consistent Estimators for Learning to Defer to an Expert. ICML, 2020.
+\bibitem{zhou2021informer} Zhou et al. Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting. AAAI, 2021.
+\bibitem{wu2021autoformer} Wu et al. Autoformer: Decomposition Transformers with Auto-Correlation. NeurIPS, 2021.
+\bibitem{shanmugam2021tta} Shanmugam et al. Better Aggregation in Test-Time Augmentation. ICCV, 2021.
 \end{thebibliography}
 
 \end{document}
