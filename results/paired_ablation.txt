@@ -1,0 +1,13 @@
+PAIRED ABLATION: Gate effect isolated per source (H=96)
+===========================================================================
+Dataset      Ung+Ret   Gat+Ret   Δ(gate)   Ung+Rnd   Gat+Rnd   Δ(gate)
+---------------------------------------------------------------------------
+ETTm2          +5.1%     +4.9%     -0.3pp     -2.7%     -0.4%     +2.4pp
+ETTh1          +7.9%     +7.3%     -0.6pp    +10.6%     +9.7%     -0.8pp
+Weather        +9.3%     +8.5%     -0.7pp     +6.7%     +6.4%     -0.2pp
+ETTm1          +4.7%     +4.3%     -0.4pp     -0.8%     -0.1%     +0.7pp
+ETTh2          +1.4%     +0.8%     -0.6pp     +5.6%     +4.8%     -0.9pp
+ECL            -2.9%     +0.2%     +3.1pp    -23.0%    -12.7%    +10.3pp
+Traffic       -36.6%    -36.4%     +0.2pp   -135.1%    -94.6%    +40.5pp
+
+Δ(gate) > 0 means gating HELPS; < 0 means gating HURTS

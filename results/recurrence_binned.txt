@@ -1,0 +1,21 @@
+Total windows: 696, datasets: ['ETTm2' 'ETTh1' 'Weather' 'ETTm1' 'ETTh2']
+
+BINNED RECURRENCE → RETRIEVAL ADVANTAGE (5 bins, all windows)
+======================================================================
+  Bin   Recurrence    Ret imp    Rnd imp    Ret adv     N
+-------------------------------------------------------
+   Q1  [0.34,0.72]      +3.2%      -5.1%      +8.2pp   140
+   Q2  [0.72,0.76]      +1.0%     -14.4%     +15.4pp   139
+   Q3  [0.76,0.80]      +4.0%     -26.2%     +30.2pp   139
+   Q4  [0.80,0.85]      +0.2%     -41.9%     +42.1pp   139
+   Q5  [0.85,0.96]      +4.0%     -78.3%     +82.4pp   139
+
+KEY: Ret adv = gain(Gate+Ret) - gain(Gate+Random)
+Positive = retrieval helps more than random
+
+PER-DATASET SUMMARY
+  ETTm2: rec=0.796, ret_adv=+71.9pp, ret_imp=+1.8%, rnd_imp=-70.1%
+  ETTh1: rec=0.626, ret_adv=+1.0pp, ret_imp=+3.2%, rnd_imp=+2.1%
+  Weather: rec=0.800, ret_adv=+11.1pp, ret_imp=+3.7%, rnd_imp=-7.4%
+  ETTm1: rec=0.798, ret_adv=+25.5pp, ret_imp=+3.0%, rnd_imp=-22.5%
+  ETTh2: rec=0.688, ret_adv=+3.7pp, ret_imp=+0.4%, rnd_imp=-3.3%
