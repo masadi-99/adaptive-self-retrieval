@@ -129,39 +129,44 @@ Traffic & $-36.6$ & $-36.4$ & $+0.2$ & $-135.1$ & $-94.6$ & $\mathbf{+40.5}$ \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:decomp} reveals three distinct regimes:
+Table~\ref{tab:decomp} reveals three regimes:
 
-\textbf{Favorable datasets (ETTm2, ETTm1, Weather, ETTh1, ETTh2).} Corrections from retrieved neighbors are inherently reliable: ungated retrieved correction already improves MSE by $+1$--$9\%$. The gate has a small negative effect ($\Delta_g \approx -0.5$pp) because it occasionally suppresses useful corrections where agreement happens to be low. Here, retrieval quality---not gating---drives the gains.
+\textbf{Regime 1: Diversity suffices (ETTh1, ETTh2, Weather).} Auxiliary forecasts are useful regardless of retrieval: random windows perform comparably to or better than retrieved neighbors (ETTh1: $+9.7\%$ random vs.\ $+7.3\%$ retrieved; ETTh2: $+4.8\%$ vs.\ $+0.8\%$). Generic input diversity---not shape similarity---drives the gains. The gate has a small negative effect ($\Delta_g \approx -0.7$pp) because it occasionally suppresses useful corrections.
 
-\textbf{Dangerous datasets (ECL, Traffic).} Corrections are noisy or systematically harmful: ungated retrieved correction degrades ECL by $-2.9\%$ and Traffic by $-36.6\%$. The gate prevents part of this degradation ($\Delta_g = +3.1$pp for ECL). With random windows, the damage is far worse (ECL $-23\%$, Traffic $-135\%$) and gating provides substantial protection ($\Delta_g = +10$--$40$pp).
+\textbf{Regime 2: Retrieval adds value (ETTm1, ETTm2).} Retrieved neighbors clearly outperform random windows (ETTm2: $+4.9\%$ retrieved vs.\ $-0.4\%$ random). Recurring temporal structure makes similar historical windows genuinely informative. Random windows give near-zero or negative improvement because their temporal shapes are misaligned with the series' periodic patterns.
 
-\textbf{The gate is a safety mechanism.} Its value is \emph{asymmetric}: it provides little benefit when corrections are good, but substantial protection when corrections are bad. The strongest overall results come from combining gating with retrieval, which provides both informative corrections (on favorable datasets) and at least partial protection (on dangerous ones).
+\textbf{Regime 3: Gate protects (ECL, Traffic).} Auxiliary corrections can be noisy or systematically harmful: ungated correction degrades ECL by $-2.9\%$ and Traffic by $-36.6\%$. The gate prevents part of this ($\Delta_g = +3.1$pp for ECL). With random windows, the damage is far worse ($-23\%$, $-135\%$) and gating provides substantial protection ($\Delta_g = +10$--$40$pp).
+
+The gate's value is \emph{asymmetric}: it provides little benefit in Regimes 1--2, but essential protection in Regime 3. The strongest overall results come from combining gating with retrieval (Regime 2 gains plus Regime 3 protection).
 
 %-------------------------------------------
 \subsection{When Does Retrieval Help Beyond Diversity?}
 \label{sec:recurrence}
 %-------------------------------------------
 
-We define the \emph{retrieval advantage} as the difference between gated-retrieved and gated-random MSE improvement, measured per test window. We bin windows by \emph{recurrence score} (maximum autocorrelation of the context window beyond lag 10):
+We define the \emph{retrieval advantage} as the difference between gated-retrieved and gated-random MSE improvement. Table~\ref{tab:recurrence} shows this advantage per dataset, alongside the mean autocorrelation peak (recurrence score).
 
-\begin{center}
+\begin{table}[h]
+\centering
+\caption{Retrieval advantage and recurrence by dataset. Higher recurrence is associated with greater retrieval advantage \emph{across datasets} ($r{=}0.96$, 5 datasets). Within each dataset, the relationship is weaker ($r{\approx}0.1$), indicating recurrence is a dataset-level, not window-level, predictor.}
+\label{tab:recurrence}
 \small
 \begin{tabular}{l c c c c}
 \toprule
-Bin & Recurrence range & Retrieved imp. & Random imp. & Ret.\ advantage \\
+Dataset & Recurrence & Retrieved imp. & Random imp. & Ret.\ advantage \\
 \midrule
-Q1 (low) & $[0.34, 0.72]$ & $+3.2\%$ & $-5.1\%$ & $+8$pp \\
-Q2 & $[0.72, 0.76]$ & $+1.0\%$ & $-14.4\%$ & $+15$pp \\
-Q3 & $[0.76, 0.80]$ & $+4.0\%$ & $-26.2\%$ & $+30$pp \\
-Q4 & $[0.80, 0.85]$ & $+0.2\%$ & $-41.9\%$ & $+42$pp \\
-Q5 (high) & $[0.85, 0.96]$ & $+4.0\%$ & $-78.3\%$ & $+82$pp \\
+ETTm2 & 0.80 & $+1.8\%$ & $-70.1\%$ & $+71.9$pp \\
+ETTm1 & 0.80 & $+3.0\%$ & $-22.5\%$ & $+25.5$pp \\
+Weather & 0.80 & $+3.7\%$ & $-7.4\%$ & $+11.1$pp \\
+ETTh2 & 0.69 & $+0.4\%$ & $-3.3\%$ & $+3.7$pp \\
+ETTh1 & 0.63 & $+3.2\%$ & $+2.1\%$ & $+1.0$pp \\
 \bottomrule
 \end{tabular}
-\end{center}
+\end{table}
 
-Window-level recurrence is associated with greater retrieval advantage (monotonically increasing from $+8$pp to $+82$pp across quintiles). The advantage is driven primarily by random windows \emph{failing} at high recurrence: when a series has strong periodic structure, randomly-selected windows produce temporally mismatched corrections that the gate cannot fully prevent. Retrieved neighbors avoid this because their temporal shapes align with the recurring pattern.
+The retrieval advantage is large for periodic datasets (ETTm2: $+72$pp, ETTm1: $+26$pp) and near-zero for aperiodic ones (ETTh1: $+1$pp). The advantage is driven primarily by random windows \emph{failing} on periodic data: randomly-selected temporal shapes are misaligned with the recurring structure, producing systematically biased corrections that the gate cannot fully prevent ($-70\%$ random on ETTm2). Retrieved neighbors avoid this because their temporal shapes align with the periodic pattern.
 
-This suggests a practical diagnostic: on series with high autocorrelation, building a retrieval index is valuable; on aperiodic series, random windows suffice and the index can be skipped (saving storage and embedding computation).
+Within individual datasets, higher window-level recurrence shows a weak positive association with retrieval advantage on ETTm2 and ETTm1 ($r {\approx} 0.14$), but not on ETTh1 or Weather ($r {\leq} 0$). Recurrence is therefore useful as a \emph{dataset-level} diagnostic---practitioners can assess whether a series is sufficiently periodic to warrant a retrieval index---but not as a per-window predictor within a dataset.
 
 %-------------------------------------------
 \subsection{Cross-Model Generalization}

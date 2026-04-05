@@ -1,0 +1,36 @@
+WITHIN-DATASET RECURRENCE ANALYSIS
+===========================================================================
+ETTm2 (n=240, within-dataset r=+0.143):
+    Low: rec=[0.65,0.76], ret_imp=+2.5%, rnd_imp=-23.1%, ret_adv=+25.6pp (n=80)
+    Mid: rec=[0.76,0.82], ret_imp=+2.3%, rnd_imp=-41.8%, ret_adv=+44.1pp (n=80)
+   High: rec=[0.82,0.94], ret_imp=+0.7%, rnd_imp=-145.5%, ret_adv=+146.1pp (n=80)
+
+ETTm1 (n=240, within-dataset r=+0.135):
+    Low: rec=[0.53,0.76], ret_imp=+2.3%, rnd_imp=-4.6%, ret_adv=+7.0pp (n=80)
+    Mid: rec=[0.76,0.84], ret_imp=+2.7%, rnd_imp=-26.6%, ret_adv=+29.3pp (n=80)
+   High: rec=[0.84,0.96], ret_imp=+4.0%, rnd_imp=-36.3%, ret_adv=+40.3pp (n=80)
+
+Weather (n=104, within-dataset r=-0.190):
+    Low: rec=[0.44,0.77], ret_imp=+2.5%, rnd_imp=-18.9%, ret_adv=+21.5pp (n=35)
+    Mid: rec=[0.78,0.84], ret_imp=+5.5%, rnd_imp=-0.6%, ret_adv=+6.1pp (n=34)
+   High: rec=[0.84,0.90], ret_imp=+3.1%, rnd_imp=-2.4%, ret_adv=+5.5pp (n=35)
+
+ETTh1 (n=56, within-dataset r=-0.068):
+    Low: rec=[0.34,0.55], ret_imp=-1.0%, rnd_imp=-2.0%, ret_adv=+1.0pp (n=19)
+    Mid: rec=[0.58,0.72], ret_imp=+5.3%, rnd_imp=+1.4%, ret_adv=+3.9pp (n=18)
+   High: rec=[0.72,0.85], ret_imp=+5.3%, rnd_imp=+6.9%, ret_adv=-1.6pp (n=19)
+
+ETTh2 (n=56, within-dataset r=+0.106):
+    Low: rec=[0.54,0.66], ret_imp=+1.2%, rnd_imp=-0.3%, ret_adv=+1.5pp (n=19)
+    Mid: rec=[0.67,0.72], ret_imp=+0.8%, rnd_imp=-3.8%, ret_adv=+4.6pp (n=18)
+   High: rec=[0.72,0.80], ret_imp=-0.9%, rnd_imp=-5.8%, ret_adv=+4.9pp (n=19)
+
+DATASET-CENTERED ANALYSIS
+===========================================================================
+Overall r(recurrence, centered_ret_advantage) = +0.062
+
+  Q1: centered_ret_adv=-8.9pp, raw_ret_adv=+8.2pp
+  Q2: centered_ret_adv=-27.2pp, raw_ret_adv=+15.4pp
+  Q3: centered_ret_adv=-10.6pp, raw_ret_adv=+30.2pp
+  Q4: centered_ret_adv=+2.1pp, raw_ret_adv=+42.1pp
+  Q5: centered_ret_adv=+44.6pp, raw_ret_adv=+82.4pp
