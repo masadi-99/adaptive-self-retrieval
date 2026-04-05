@@ -1,0 +1,15 @@
+RECURRENCE ANALYSIS: Per-window retrieval advantage vs ACF peak
+======================================================================
+ETTm2: mean_recurrence=0.796, mean_ret_adv=+71.9pp, r(recurrence,ret_adv)=+0.143
+ETTm1: mean_recurrence=0.798, mean_ret_adv=+25.5pp, r(recurrence,ret_adv)=+0.135
+Weather: mean_recurrence=0.800, mean_ret_adv=+11.1pp, r(recurrence,ret_adv)=-0.190
+ETTh1: mean_recurrence=0.626, mean_ret_adv=+1.0pp, r(recurrence,ret_adv)=-0.068
+ETTh2: mean_recurrence=0.688, mean_ret_adv=+3.7pp, r(recurrence,ret_adv)=+0.106
+
+BINNED: recurrence quartiles → retrieval advantage
+  Q1(low): n=174, ret_adv=+7.8pp, ret_imp=+2.8%, rand_imp=-5.1%
+  Q2: n=174, ret_adv=+16.5pp, ret_imp=+2.6%, rand_imp=-13.8%
+  Q3: n=174, ret_adv=+34.0pp, ret_imp=+0.9%, rand_imp=-33.1%
+  Q4(high): n=174, ret_adv=+84.3pp, ret_imp=+3.7%, rand_imp=-80.6%
+
+Overall r(recurrence, retrieval_advantage) = +0.096
