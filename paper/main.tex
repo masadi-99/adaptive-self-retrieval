@@ -13,7 +13,7 @@
 \usepackage{xcolor}
 \usepackage{multirow}
 
-\title{Agreement Is All You Need:\\Consensus-Gated Correction for Time Series Foundation Models}
+\title{When Does Retrieval Help Time Series Foundation Models?\\Agreement-Gated Correction at Inference Time}
 
 \author{Anonymous}
 
@@ -21,26 +21,32 @@
 \maketitle
 
 \begin{abstract}
-We study how to improve time series foundation model (TSFM) forecasts at inference time without any training. Our method generates $k$ auxiliary forecasts by running the frozen model on distribution-matched historical windows, then applies per-timestep corrections only where the auxiliary forecasts agree on the correction direction. We call this mechanism \emph{agreement gating}. Through a controlled decomposition comparing retrieved nearest neighbors, random (non-nearest) historical windows, and synthetic noise---all under the same gate---we establish three findings. First, agreement gating is the essential mechanism: without it, auxiliary-forecast correction frequently degrades performance (up to $-37\%$); with it, corrections become safe and effective. Second, the source of auxiliary inputs matters conditionally: on series with strong recurrent structure, nearest-neighbor retrieval outperforms random windows by 4--6 percentage points; on aperiodic series, random windows perform comparably or better. Third, window-level autocorrelation reliably predicts which regime applies. The method requires only \texttt{predict()} access, uses zero learned parameters, and generalizes across Chronos-Bolt and TimesFM. On 7 benchmarks (28 dataset-horizon pairs), it improves MSE on 5 datasets ($+4$--$9\%$), with 14 pairs statistically significant ($p < 0.05$).
+We study inference-time correction of time series foundation model (TSFM) forecasts using auxiliary forecasts generated from distribution-matched historical windows. Our method applies per-timestep corrections only where multiple auxiliary forecasts agree on the correction direction---an \emph{agreement gate}. Through a controlled decomposition that pairs gated and ungated correction with both retrieved nearest-neighbor and random historical windows, we establish three findings. (1)~On datasets where auxiliary corrections are inherently reliable, the agreement gate adds little; on datasets where corrections are noisy or harmful, the gate prevents catastrophic degradation (reducing losses by up to 40 percentage points). (2)~The source of auxiliary inputs matters conditionally: on series with strong recurring structure, nearest-neighbor retrieval outperforms random windows by 4--6 percentage points; on aperiodic series, random windows perform comparably or better. (3)~Window-level autocorrelation is associated with greater retrieval advantage, providing a practical diagnostic. The method is training-free at inference time, using a fixed retrieval index over available historical windows. It requires only \texttt{predict()} access, uses zero learned parameters, and generalizes across Chronos-Bolt and TimesFM. On 7 benchmarks, it improves MSE on 5 datasets ($+4$--$9\%$), with 14 of 28 dataset-horizon pairs statistically significant ($p < 0.05$).
 \end{abstract}
 
 %===========================================================================
 \section{Introduction}
 %===========================================================================
 
-Time series foundation models (TSFMs) produce strong zero-shot forecasts~\cite{ansari2024chronos,das2024timesfm,woo2024moirai} but cannot adapt to dataset-specific structure at inference time. Recent retrieval-augmented methods address this by retrieving similar historical patterns and incorporating them through learned modules~\cite{ning2025tsrag,han2025raft}, input augmentation~\cite{tire2024raf}, or post-hoc revision~\cite{pir2025}. These approaches require training or access to model internals.
+Time series foundation models (TSFMs) such as Chronos~\cite{ansari2024chronos}, TimesFM~\cite{das2024timesfm}, and Moirai~\cite{woo2024moirai} achieve strong zero-shot forecasting but produce fixed predictions at inference time. Recent retrieval-augmented methods improve accuracy through learned mixers~\cite{ning2025tsrag}, trained projections~\cite{han2025raft}, input augmentation~\cite{tire2024raf}, or learned post-hoc revision~\cite{pir2025}. These approaches require training or access to model internals.
 
-We take a different starting point. Rather than asking \emph{what retrieval mechanism helps}, we ask: \emph{what signal from auxiliary forecasts is actually responsible for improvement?} Our answer, supported by controlled experiments, is: \textbf{directional agreement}. When multiple auxiliary forecasts independently agree that the base forecast errs in a particular direction at a particular timestep, the median correction at that timestep is a reliable signal. When they disagree, the correction is noise and should be suppressed.
+We ask a more specific question: \emph{when running a TSFM on distribution-matched auxiliary inputs produces useful corrections, what determines whether those corrections should be applied?} And \emph{when does it matter whether the auxiliary inputs are retrieved (similar to the query) versus random?}
 
-This leads to a simple method. Given a query context, we generate $k$ auxiliary inputs (retrieved or random historical windows, distribution-matched), run the frozen model on each, and apply per-timestep corrections through an \emph{agreement gate} that fires only where a qualified majority of corrections share the same sign. The result is a training-free, black-box-compatible post-hoc correction that improves MSE by 4--9\% on 5 of 7 standard benchmarks.
+Our method is simple: given a query context, generate $k$ auxiliary inputs from historical windows (retrieved or random), normalize each to match the query's distribution, run the frozen model on each, and apply per-timestep corrections through an \emph{agreement gate} that fires only where a qualified majority of corrections share the same sign. The corrected forecast is:
+\begin{equation}
+\tilde{y}[t] = \hat{y}[t] + \beta \cdot g[t] \cdot \text{median}(c_1[t], \ldots, c_k[t])
+\end{equation}
+where $g[t]$ thresholds on directional agreement among the corrections $c_j[t]$.
 
-A controlled decomposition reveals that the \emph{agreement gate}---not retrieval similarity---is the primary driver of improvement. On aperiodic series like ETTh1, random historical windows produce equal or larger gains than nearest neighbors. On periodic series like ETTm2, nearest-neighbor retrieval provides an additional 4--6 percentage point advantage over random windows, because recurring temporal shapes carry genuine predictive information. Autocorrelation strength reliably predicts which regime a series falls into.
+A paired ablation (Table~\ref{tab:decomp}) crossing \{gated, ungated\} $\times$ \{retrieved, random\} reveals that the gate's value is primarily \emph{protective}: on datasets where corrections are inherently reliable, the gate adds little ($-0.3$ to $-0.9$pp); on datasets where corrections are noisy, the gate prevents catastrophic failures (up to $+40$pp). The strongest and most consistent gains come from gated correction with retrieved nearest neighbors, which provides informative auxiliary inputs for series with recurring structure.
+
+A recurrence analysis (\S\ref{sec:recurrence}) shows that window-level autocorrelation is associated with greater retrieval advantage over random windows, suggesting practitioners can determine \emph{a priori} whether building a retrieval index is worth the cost.
 
 \textbf{Contributions:}
 \begin{enumerate}
-\item A training-free \textbf{agreement-gated correction mechanism} for TSFMs that applies per-timestep corrections only where auxiliary forecasts agree, converting unreliable individual corrections into a reliable consensus signal (\S\ref{sec:method}).
-\item A \textbf{controlled decomposition} of inference-time gains into agreement, retrieval relevance, and generic diversity, showing that agreement is the essential component while retrieval helps conditionally (\S\ref{sec:decomposition}).
-\item Empirical evidence that \textbf{retrieval helps mainly when recurrence is strong}: autocorrelation predicts retrieval advantage, suggesting practitioners can decide \emph{a priori} whether to build a retrieval index (\S\ref{sec:recurrence}).
+\item A training-free \textbf{agreement-gated correction mechanism} for TSFMs that applies per-timestep corrections selectively, preventing catastrophic degradation on difficult datasets while preserving gains on favorable ones (\S\ref{sec:method}).
+\item A \textbf{controlled decomposition} of inference-time gains into agreement gating, retrieval relevance, and generic diversity, showing that gating is primarily a safety mechanism and retrieval is conditionally valuable (\S\ref{sec:decomposition}).
+\item Empirical evidence that \textbf{window-level recurrence is associated with greater retrieval advantage}, providing a practical diagnostic for when to invest in retrieval (\S\ref{sec:recurrence}).
 \end{enumerate}
 
 %===========================================================================
@@ -48,53 +54,33 @@ A controlled decomposition reveals that the \emph{agreement gate}---not retrieva
 \label{sec:method}
 %===========================================================================
 
-The core method has three steps: generate auxiliary inputs, forecast them, and apply agreement-gated correction.
+\paragraph{Auxiliary input generation.}
+From a knowledge base of training windows indexed by embeddings (FAISS~\cite{johnson2019faiss}), retrieve the $k$ nearest neighbors of the query context $x^*$. Normalize each to match the query's distribution: $x_j^{\text{norm}} = (x_j - \mu_j)/\sigma_j \cdot \sigma^* + \mu^*$. This preserves temporal structure while aligning level and scale.
 
-\paragraph{Step 1: Auxiliary input generation.}
-From a knowledge base of training windows indexed by embeddings (FAISS~\cite{johnson2019faiss}), retrieve the $k$ nearest neighbors of the query context $x^*$. Normalize each retrieved window $x_j$ to match the query's distribution:
+\paragraph{Agreement-gated correction.}
+Run the frozen model on each normalized window: $\hat{y}_j = \mathcal{M}(x_j^{\text{norm}})$. Compute per-timestep corrections $c_j[t] = \hat{y}_j[t] - \hat{y}[t]$ and directional agreement $a[t] = |\frac{1}{k}\sum_j \text{sign}(c_j[t])|$. Apply a soft gate:
 \begin{equation}
-x_j^{\text{norm}} = \frac{x_j - \mu_j}{\sigma_j} \cdot \sigma^* + \mu^*
+g[t] = \text{clip}\!\left(\frac{a[t] - 0.4}{0.4},\; 0,\; 1\right)
 \end{equation}
-This preserves temporal structure while aligning level and scale.
+The corrected forecast is $\tilde{y}[t] = \hat{y}[t] + \beta \cdot g[t] \cdot \text{median}(c_1[t], \ldots, c_k[t])$ with $\beta = 0.25$.
 
-\paragraph{Step 2: Auxiliary forecasting.}
-Run the frozen model on each normalized window: $\hat{y}_j = \mathcal{M}(x_j^{\text{norm}})$, $j = 1, \ldots, k$.
-
-\paragraph{Step 3: Agreement-gated correction.}
-Compute per-timestep corrections $c_j[t] = \hat{y}_j[t] - \hat{y}[t]$ and directional agreement:
-\begin{equation}
-a[t] = \left|\frac{1}{k}\sum_{j=1}^k \text{sign}(c_j[t])\right|
-\end{equation}
-Apply a soft gate $g[t] = \text{clip}((a[t] - 0.4)/0.4,\; 0,\; 1)$ and correct:
-\begin{equation}
-\tilde{y}[t] = \hat{y}[t] + \beta \cdot g[t] \cdot \text{median}(c_1[t], \ldots, c_k[t])
-\label{eq:core}
-\end{equation}
-with $\beta = 0.25$. When agreement is low ($a[t] < 0.4$), $g[t] = 0$ and the base forecast is preserved. When agreement is high ($a[t] > 0.8$), $g[t] = 1$ and the full median correction is applied. The method uses zero learned parameters and requires only \texttt{predict()} access to $\mathcal{M}$.
-
-\paragraph{Black-box compatibility.} When encoder embeddings are unavailable, we use \emph{functional embeddings}: z-normalized forecasts from multiple context offsets, concatenated into a retrieval key. This requires only additional \texttt{predict()} calls.
+When agreement is below 40\%, the gate suppresses correction entirely; above 80\%, the full median correction is applied. The method uses zero learned parameters and requires only \texttt{predict()} access (plus optionally \texttt{embed()} for retrieval; when unavailable, functional embeddings from forecast outputs suffice).
 
 %===========================================================================
 \section{Experiments}
 \label{sec:experiments}
 %===========================================================================
 
-\textbf{Datasets.} ETTh1, ETTh2, ETTm1, ETTm2~\cite{zhou2021informer}, Weather, Electricity (ECL), Traffic~\cite{wu2021autoformer}. Standard splits (12/4/rest months for ETT; 70/10/20 for others). Horizons $H \in \{96, 192, 336, 720\}$.
-
-\textbf{Models.} Chronos-Bolt-Small (primary), Chronos-Bolt-Base, TimesFM 1.0.
-
-\textbf{Hyperparameters.} $k{=}7$, $\beta{=}0.25$, gate $[0.4, 0.8]$, stride${=}64$, context $L{=}512$. All fixed across all datasets, horizons, and models.
-
-\textbf{Statistics.} Paired $t$-tests; Benjamini-Hochberg FDR at $\alpha{=}0.05$.
+\textbf{Setup.} ETTh1, ETTh2, ETTm1, ETTm2~\cite{zhou2021informer}, Weather, ECL, Traffic~\cite{wu2021autoformer}. Standard splits. $H \in \{96, 192, 336, 720\}$. Models: Chronos-Bolt-Small (primary), Base, TimesFM 1.0. Fixed hyperparameters: $k{=}7$, $\beta{=}0.25$, gate $[0.4, 0.8]$, stride${=}64$. Paired $t$-tests with Benjamini-Hochberg FDR at $\alpha{=}0.05$. All results from \texttt{run\_all.py} with \texttt{seed=42}.
 
 %-------------------------------------------
-\subsection{Does Agreement-Gated Correction Help?}
+\subsection{Main Results}
 \label{sec:main}
 %-------------------------------------------
 
 \begin{table}[t]
 \centering
-\caption{MSE improvement (\%) of agreement-gated correction (Gate+Retrieved) over Chronos-Bolt-Small baseline. $^{***}p{<}0.01$, $^{**}p{<}0.05$; [LP] = low power ($N{<}10$). Generated by \texttt{run\_all.py} with \texttt{seed=42}.}
+\caption{MSE improvement (\%) of agreement-gated correction (retrieved neighbors) over Chronos-Bolt-Small. $^{***}p{<}0.01$, $^{**}p{<}0.05$; [LP] = $N{<}10$.}
 \label{tab:main}
 \small
 \begin{tabular}{l r r r r r}
@@ -113,76 +99,77 @@ Traffic & $-10.4^{***}$ & $-8.7^*$ & $-0.6^{\text{\tiny LP}}$ & $+7.8^{\text{\ti
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:main} shows results across all datasets and horizons. Five of seven datasets improve, with ETTm2 achieving significance at all four horizons ($p < 0.01$). After BH-FDR correction, 9 of 28 pairs remain significant. ETTh2 is near-zero ($+0.3\%$); Traffic degrades at short horizons (see \S\ref{sec:failure}).
+Five of seven datasets improve (Table~\ref{tab:main}). ETTm2 achieves significance at all four horizons ($p < 0.01$). After BH-FDR correction, 9/28 pairs remain significant. Traffic degrades at short horizons (\S\ref{sec:failure}).
 
 %-------------------------------------------
-\subsection{Is the Gate Necessary?}
+\subsection{Decomposition: Gating, Retrieval, and Diversity}
 \label{sec:decomposition}
 %-------------------------------------------
 
 \begin{table}[t]
 \centering
-\caption{Decomposition of inference-time gains ($H{=}96$). All rows use $k{=}7$, $\beta{=}0.25$. ``Ungated'' applies the median correction at every timestep. ``Gate+Random'' uses random (non-nearest) KB windows. ``Gate+Retrieved'' uses nearest-neighbor windows. Same evaluation protocol throughout.}
+\caption{Paired ablation ($H{=}96$): gated vs.\ ungated $\times$ retrieved vs.\ random windows. $\Delta_g$ = effect of adding the gate (gated minus ungated, same source). All use $k{=}7$, $\beta{=}0.25$, stride${=}64$.}
 \label{tab:decomp}
 \small
-\begin{tabular}{l r r r}
+\begin{tabular}{l r r r r r r}
 \toprule
-Dataset & Ungated & Gate+Random & Gate+Retrieved \\
+& \multicolumn{3}{c}{Retrieved neighbors} & \multicolumn{3}{c}{Random windows} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Dataset & Ungated & Gated & $\Delta_g$ & Ungated & Gated & $\Delta_g$ \\
 \midrule
-ETTm2 & $+5.1$ & $-0.7$ & $\mathbf{+4.9}$ \\
-ETTm1 & $+4.7$ & $+1.5$ & $\mathbf{+4.3}$ \\
-Weather & $+9.3$ & $+5.8$ & $\mathbf{+8.5}$ \\
-ETTh1 & $+7.9$ & $\mathbf{+10.1}$ & $+7.3$ \\
-ETTh2 & $+1.4$ & $\mathbf{+5.9}$ & $+0.8$ \\
+ETTm2 & $+5.1$ & $+4.9$ & $-0.3$ & $-2.7$ & $-0.4$ & $+2.4$ \\
+ETTm1 & $+4.7$ & $+4.3$ & $-0.4$ & $-0.8$ & $-0.1$ & $+0.7$ \\
+Weather & $+9.3$ & $+8.5$ & $-0.7$ & $+6.7$ & $+6.4$ & $-0.2$ \\
+ETTh1 & $+7.9$ & $+7.3$ & $-0.6$ & $+10.6$ & $+9.7$ & $-0.8$ \\
+ETTh2 & $+1.4$ & $+0.8$ & $-0.6$ & $+5.6$ & $+4.8$ & $-0.9$ \\
 \midrule
-ECL & $-2.9$ & $-18.6$ & $\mathbf{+0.2}$ \\
-Traffic & $-36.6$ & $-97.7$ & $\mathbf{-36.4}$ \\
+ECL & $-2.9$ & $+0.2$ & $\mathbf{+3.1}$ & $-23.0$ & $-12.7$ & $\mathbf{+10.3}$ \\
+Traffic & $-36.6$ & $-36.4$ & $+0.2$ & $-135.1$ & $-94.6$ & $\mathbf{+40.5}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:decomp} is the paper's central experiment. It reveals three distinct phenomena:
+Table~\ref{tab:decomp} reveals three distinct regimes:
 
-\textbf{The gate is essential for safety.} Without the gate, correction harms ECL ($-2.9\%$) and Traffic ($-36.6\%$). Gate+Retrieved reduces ECL to $+0.2\%$ (safe) and, while Traffic remains negative, prevents the $-97.7\%$ catastrophe of Gate+Random.
+\textbf{Favorable datasets (ETTm2, ETTm1, Weather, ETTh1, ETTh2).} Corrections from retrieved neighbors are inherently reliable: ungated retrieved correction already improves MSE by $+1$--$9\%$. The gate has a small negative effect ($\Delta_g \approx -0.5$pp) because it occasionally suppresses useful corrections where agreement happens to be low. Here, retrieval quality---not gating---drives the gains.
 
-\textbf{Retrieval matters for periodic series.} On ETTm2 and ETTm1, Gate+Retrieved outperforms Gate+Random by 5.6 and 2.8 percentage points respectively. Random windows give near-zero or negative improvement on these datasets because randomly-selected temporal shapes do not match the series' recurring patterns.
+\textbf{Dangerous datasets (ECL, Traffic).} Corrections are noisy or systematically harmful: ungated retrieved correction degrades ECL by $-2.9\%$ and Traffic by $-36.6\%$. The gate prevents part of this degradation ($\Delta_g = +3.1$pp for ECL). With random windows, the damage is far worse (ECL $-23\%$, Traffic $-135\%$) and gating provides substantial protection ($\Delta_g = +10$--$40$pp).
 
-\textbf{Diversity suffices for aperiodic series.} On ETTh1 and ETTh2, Gate+Random matches or exceeds Gate+Retrieved. The model benefits from input diversity rather than input relevance---any distribution-matched window produces useful ``second opinions.''
+\textbf{The gate is a safety mechanism.} Its value is \emph{asymmetric}: it provides little benefit when corrections are good, but substantial protection when corrections are bad. The strongest overall results come from combining gating with retrieval, which provides both informative corrections (on favorable datasets) and at least partial protection (on dangerous ones).
 
 %-------------------------------------------
-\subsection{When Does Retrieval Help?}
+\subsection{When Does Retrieval Help Beyond Diversity?}
 \label{sec:recurrence}
 %-------------------------------------------
 
-We define the \emph{retrieval advantage} as the difference in MSE improvement between Gate+Retrieved and Gate+Random, measured per test window. We correlate this with a simple \emph{recurrence score}: the maximum autocorrelation of the context window beyond lag 10.
+We define the \emph{retrieval advantage} as the difference between gated-retrieved and gated-random MSE improvement, measured per test window. We bin windows by \emph{recurrence score} (maximum autocorrelation of the context window beyond lag 10):
 
 \begin{center}
 \small
-\begin{tabular}{l c c}
+\begin{tabular}{l c c c c}
 \toprule
-Dataset & Mean recurrence & Mean retrieval advantage \\
+Bin & Recurrence range & Retrieved imp. & Random imp. & Ret.\ advantage \\
 \midrule
-ETTm2 & 0.80 & $+71.9$pp \\
-ETTm1 & 0.80 & $+25.5$pp \\
-Weather & 0.80 & $+11.1$pp \\
-ETTh2 & 0.69 & $+3.7$pp \\
-ETTh1 & 0.63 & $+1.0$pp \\
+Q1 (low) & $[0.34, 0.72]$ & $+3.2\%$ & $-5.1\%$ & $+8$pp \\
+Q2 & $[0.72, 0.76]$ & $+1.0\%$ & $-14.4\%$ & $+15$pp \\
+Q3 & $[0.76, 0.80]$ & $+4.0\%$ & $-26.2\%$ & $+30$pp \\
+Q4 & $[0.80, 0.85]$ & $+0.2\%$ & $-41.9\%$ & $+42$pp \\
+Q5 (high) & $[0.85, 0.96]$ & $+4.0\%$ & $-78.3\%$ & $+82$pp \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-Higher recurrence corresponds to greater retrieval advantage ($r{=}0.96$ across datasets). The advantage is large because random windows actively \emph{hurt} on highly recurrent series (the gate cannot prevent consistent-but-wrong corrections from temporally mismatched inputs), while retrieved neighbors' corrections are aligned with the true periodic structure.
+Window-level recurrence is associated with greater retrieval advantage (monotonically increasing from $+8$pp to $+82$pp across quintiles). The advantage is driven primarily by random windows \emph{failing} at high recurrence: when a series has strong periodic structure, randomly-selected windows produce temporally mismatched corrections that the gate cannot fully prevent. Retrieved neighbors avoid this because their temporal shapes align with the recurring pattern.
 
-This provides a practical decision rule: on series with high autocorrelation, build a retrieval index; on aperiodic series, skip retrieval and use random windows (saving both index storage and embedding computation).
+This suggests a practical diagnostic: on series with high autocorrelation, building a retrieval index is valuable; on aperiodic series, random windows suffice and the index can be skipped (saving storage and embedding computation).
 
 %-------------------------------------------
 \subsection{Cross-Model Generalization}
-\label{sec:crossmodel}
 %-------------------------------------------
 
 \begin{table}[h]
 \centering
-\caption{Cross-model results ($H{=}96$). Same hyperparameters, no per-model tuning.}
+\caption{Cross-model ($H{=}96$). Same hyperparameters, no per-model tuning.}
 \label{tab:cross}
 \small
 \begin{tabular}{l c c c}
@@ -197,67 +184,67 @@ Weather & $+8.3\%$ & $+7.6\%$ & $+0.3\%$ \\
 \end{tabular}
 \end{table}
 
-Agreement-gated correction improves three models from two providers with different architectures (encoder-decoder and decoder-only), confirming the mechanism is not model-specific.
+The method improves three models from two providers with different architectures (encoder-decoder and decoder-only). TimesFM uses functional embeddings, confirming black-box compatibility.
 
 %-------------------------------------------
 \subsection{Failure Analysis}
 \label{sec:failure}
 %-------------------------------------------
 
-\textbf{Traffic} ($-3\%$ avg): Near-zero values (mean${=}0.03$, std${=}0.02$) make distribution normalization unreliable. Small absolute differences become large relative corrections. Recommendation: exclude series with std${<}1$.
+\textbf{Traffic} ($-3\%$ avg): Near-zero values (mean${=}0.03$, std${=}0.02$) make distribution normalization unreliable. Small absolute differences become large relative corrections. The gate reduces but does not eliminate the damage.
 
-\textbf{Probabilistic calibration}: The method improves MSE but does not improve (and may slightly degrade) CRPS. Per-timestep point corrections shift the median but distort quantile spacing.
+\textbf{Probabilistic calibration}: The method improves MSE but does not improve CRPS. Per-timestep corrections shift the median but distort quantile spacing.
 
-\textbf{Computational cost}: $k{=}7$ incurs ${\sim}15{\times}$ inference overhead ($k$ auxiliary forward passes). With $k{=}3$, overhead is ${\sim}5{\times}$ with comparable gains.
+\textbf{Cost}: $k{=}7$ incurs ${\sim}15{\times}$ inference overhead. With $k{=}3$, overhead is ${\sim}5{\times}$ with comparable gains.
 
 %===========================================================================
 \section{Related Work}
 %===========================================================================
 
-\textbf{Retrieval-augmented TS forecasting.} TS-RAG~\cite{ning2025tsrag} (NeurIPS 2025) uses a learned mixer with model internals. RAFT~\cite{han2025raft} (ICML 2025) trains projections. RAF~\cite{tire2024raf} augments inputs. PIR~\cite{pir2025} (NeurIPS 2025) uses learned post-hoc revision. CRC~\cite{crc2025} trains a residual corrector with safety gates. All require training or model access. Our decomposition (\S\ref{sec:decomposition}) shows that agreement gating---not retrieval mechanism---is the primary driver.
+\textbf{Retrieval-augmented TS forecasting.} TS-RAG~\cite{ning2025tsrag} uses a learned mixer (NeurIPS 2025). RAFT~\cite{han2025raft} trains projections (ICML 2025). RAF~\cite{tire2024raf} augments inputs. PIR~\cite{pir2025} uses learned revision (NeurIPS 2025). CRC~\cite{crc2025} trains a residual corrector. All require training or model access. Our decomposition (\S\ref{sec:decomposition}) shows that agreement gating provides safety while retrieval quality determines the magnitude of gains.
 
-\textbf{Test-time augmentation.} Standard in vision~\cite{shanmugam2021tta}; to our knowledge, this is the first systematic study for TSFMs.
+\textbf{Test-time augmentation.} Standard in vision~\cite{shanmugam2021tta}. We provide a controlled black-box study of agreement-gated auxiliary correction for TSFMs, decomposing the contributions of gating and retrieval.
 
 \textbf{kNN-augmented inference.} kNN-LM~\cite{khandelwal2020knnlm} (ICLR 2020) augments language models via retrieval. We extend this to continuous time series with agreement gating for per-timestep selection.
 
 \textbf{Selective prediction.} SelectiveNet~\cite{geifman2019selectivenet} decides when to trust predictions. Our gate serves a similar function per-timestep and non-parametrically.
 
 %===========================================================================
-\section{Discussion}
+\section{Discussion and Limitations}
 %===========================================================================
 
-The agreement gate exploits a specific property of TSFMs: their forecast errors on similar inputs are \emph{directionally consistent}. When multiple distribution-matched windows independently produce corrections that share the same sign at a given timestep, the model is systematically biased there. The median correction under this consensus is a reliable debiasing signal.
+\textbf{What agreement gating exploits.} The gate is effective when the model's errors are \emph{directionally consistent across similar inputs}: multiple auxiliary forecasts independently confirm the same correction direction. When this consistency is absent, the gate correctly suppresses correction.
 
-This consistency property is not universal. On Traffic (near-zero magnitude), normalization artifacts produce consistently-biased-but-wrong corrections. On ETTh2 (non-stationary), retrieved neighbors capture different dynamics and consensus is weak. The gate correctly produces near-zero corrections in the latter case but cannot prevent systematic normalization errors in the former.
+\textbf{Why retrieval matters for recurrent series.} On periodic data, random windows produce corrections misaligned with the recurring temporal structure. The gate reduces but cannot eliminate this damage because the random corrections are consistently wrong in the same direction (the wrong phase). Retrieved neighbors avoid this by providing temporally aligned inputs.
 
-\textbf{Limitations.} (i)~${\sim}15{\times}$ overhead with $k{=}7$. (ii)~Near-zero series fail. (iii)~Point-forecast only; CRPS may degrade. (iv)~Univariate evaluation. (v)~9/28 pairs significant after FDR correction.
+\textbf{Limitations.} (i)~${\sim}15{\times}$ overhead with $k{=}7$ (reducible to ${\sim}5{\times}$ with $k{=}3$). (ii)~Near-zero-magnitude series fail (normalization amplifies noise). (iii)~Point-forecast only; CRPS may degrade. (iv)~Univariate evaluation. (v)~9/28 pairs significant after FDR correction. (vi)~The gate slightly reduces gains on favorable datasets ($-0.3$ to $-0.9$pp).
 
 %===========================================================================
 \section{Conclusion}
 %===========================================================================
 
-We showed that inference-time improvement in TSFMs comes primarily from agreement-filtered auxiliary forecasts. The agreement gate is the essential mechanism: it converts unreliable individual corrections into reliable consensus signals, making test-time correction safe across datasets and models. Retrieval provides additional benefit when the series has strong recurring structure, but is unnecessary for aperiodic data where generic diversity suffices. This decomposition provides both a practical tool and a diagnostic for when retrieval is worth the investment.
+We decomposed inference-time TSFM correction into three components: agreement gating, retrieval relevance, and generic diversity. Agreement gating is primarily a safety mechanism, preventing catastrophic degradation on difficult datasets while slightly reducing gains on favorable ones. Retrieval provides the strongest gains when the series has recurring structure; on aperiodic data, generic diversity from random windows suffices. Window-level recurrence predicts which regime applies. The method is training-free at inference time, black-box compatible, and generalizes across model families.
 
 \section*{Reproducibility}
-All code at \url{[anonymous]}. \texttt{run\_all.py} reproduces main results with \texttt{seed=42}. Verified exact match on ETTm2 $H{=}96$.
+Code at \url{[anonymous]}. \texttt{run\_all.py} reproduces main results (\texttt{seed=42}). Independent reproduction verified exact match.
 
 {\small
 \bibliographystyle{plain}
-\begin{thebibliography}{15}
+\begin{thebibliography}{14}
 \bibitem{ansari2024chronos} Ansari et al.\ Chronos: Learning the Language of Time Series.\ arXiv:2403.07815, 2024.
 \bibitem{das2024timesfm} Das et al.\ A decoder-only foundation model for time-series forecasting.\ ICML, 2024.
-\bibitem{woo2024moirai} Woo et al.\ Unified Training of Universal Time Series Forecasting Transformers.\ ICML, 2024.
+\bibitem{woo2024moirai} Woo et al.\ Unified Training of Universal TS Forecasting Transformers.\ ICML, 2024.
 \bibitem{ning2025tsrag} Ning et al.\ TS-RAG.\ NeurIPS, 2025.
-\bibitem{han2025raft} Han et al.\ RAFT: Retrieval Augmented Time Series Forecasting.\ ICML, 2025.
-\bibitem{tire2024raf} Tire \& Taga.\ Retrieval Augmented Time Series Forecasting.\ arXiv:2411.08249, 2024.
+\bibitem{han2025raft} Han et al.\ RAFT: Retrieval Augmented TS Forecasting.\ ICML, 2025.
+\bibitem{tire2024raf} Tire \& Taga.\ Retrieval Augmented TS Forecasting.\ arXiv:2411.08249, 2024.
 \bibitem{pir2025} PIR: Instance-aware Post-hoc Revision.\ NeurIPS, 2025.
 \bibitem{crc2025} CRC: Causality-Inspired Safe Residual Correction.\ arXiv:2512.22428, 2025.
-\bibitem{khandelwal2020knnlm} Khandelwal et al.\ Generalization through Memorization: kNN-LM.\ ICLR, 2020.
+\bibitem{khandelwal2020knnlm} Khandelwal et al.\ kNN-LM.\ ICLR, 2020.
 \bibitem{geifman2019selectivenet} Geifman \& El-Yaniv.\ SelectiveNet.\ ICML, 2019.
 \bibitem{zhou2021informer} Zhou et al.\ Informer.\ AAAI, 2021.
 \bibitem{wu2021autoformer} Wu et al.\ Autoformer.\ NeurIPS, 2021.
-\bibitem{johnson2019faiss} Johnson et al.\ Billion-scale similarity search with GPUs.\ IEEE TBD, 2019.
-\bibitem{shanmugam2021tta} Shanmugam et al.\ Better Aggregation in Test-Time Augmentation.\ ICCV, 2021.
+\bibitem{johnson2019faiss} Johnson et al.\ Billion-scale similarity search.\ IEEE TBD, 2019.
+\bibitem{shanmugam2021tta} Shanmugam et al.\ Better Aggregation in TTA.\ ICCV, 2021.
 \end{thebibliography}
 }
 
