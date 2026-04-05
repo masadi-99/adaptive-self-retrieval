@@ -1,0 +1,14 @@
+STANDARDIZED KILLER EXPERIMENT (stride=64, all windows, k=7, beta=0.25)
+===========================================================================
+Dataset        H    Retrieved     Shuffled    RandNoise     Winner
+---------------------------------------------------------------------------
+ETTm2         96      +4.9%**      -0.7%        +1.0%    RETRIEVAL
+ETTh1         96      +7.3%**     +10.5%**     +11.3%**   SHUFFLED
+Weather       96      +8.5%**      +4.3%        +5.4%    RETRIEVAL
+ETTm1         96      +4.3%**      -0.2%        +2.2%    RETRIEVAL
+ETTh2         96      +0.8%        +4.8%        +6.4%     SHUFFLED
+
+Retrieved = nearest neighbors (embedding similarity)
+Shuffled = random KB windows (same normalization, no similarity)
+RandNoise = i.i.d. Gaussian (same mean/std, no temporal structure)
+Winner: RETRIEVAL if retrieved > shuffled + 1pp; SHUFFLED if shuffled > retrieved + 1pp
