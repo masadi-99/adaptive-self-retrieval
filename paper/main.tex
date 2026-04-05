@@ -21,7 +21,7 @@
 \maketitle
 
 \begin{abstract}
-We study inference-time correction of time series foundation model (TSFM) forecasts using auxiliary forecasts generated from distribution-matched historical windows. Our method applies per-timestep corrections only where multiple auxiliary forecasts agree on the correction direction---an \emph{agreement gate}. Through a controlled decomposition that pairs gated and ungated correction with both retrieved nearest-neighbor and random historical windows, we establish three findings. (1)~On datasets where auxiliary corrections are inherently reliable, the agreement gate adds little; on datasets where corrections are noisy or harmful, the gate prevents catastrophic degradation (reducing losses by up to 40 percentage points). (2)~The source of auxiliary inputs matters conditionally: on series with strong recurring structure, nearest-neighbor retrieval outperforms random windows by 4--6 percentage points; on aperiodic series, random windows perform comparably or better. (3)~Window-level autocorrelation is associated with greater retrieval advantage, providing a practical diagnostic. The method is training-free at inference time, using a fixed retrieval index over available historical windows. It requires only \texttt{predict()} access, uses zero learned parameters, and generalizes across Chronos-Bolt and TimesFM. On 7 benchmarks, it improves MSE on 5 datasets ($+4$--$9\%$), with 14 of 28 dataset-horizon pairs statistically significant ($p < 0.05$).
+We study inference-time correction of time series foundation model (TSFM) forecasts using auxiliary forecasts generated from distribution-matched historical windows. Our method applies per-timestep corrections only where multiple auxiliary forecasts agree on the correction direction---an \emph{agreement gate}. Through a controlled decomposition that pairs gated and ungated correction with both retrieved nearest-neighbor and random historical windows, we establish three findings. (1)~On datasets where auxiliary corrections are inherently reliable, the agreement gate adds little; on datasets where corrections are noisy or harmful, the gate prevents catastrophic degradation (reducing losses by up to 40 percentage points). (2)~The source of auxiliary inputs matters conditionally: on series with strong recurring structure, nearest-neighbor retrieval outperforms random windows by 4--6 percentage points; on aperiodic series, random windows perform comparably or better. (3)~Dataset-level recurrence is associated with greater retrieval advantage, providing a practical diagnostic for when retrieval is worth the added cost. The method is training-free at inference time, using a fixed retrieval index over available historical windows. It requires only \texttt{predict()} access, uses zero learned parameters, and generalizes across Chronos-Bolt and TimesFM. On 7 benchmarks, it improves MSE on 5 datasets ($+4$--$9\%$), with 14 of 28 dataset-horizon pairs statistically significant ($p < 0.05$).
 \end{abstract}
 
 %===========================================================================
@@ -40,13 +40,13 @@ where $g[t]$ thresholds on directional agreement among the corrections $c_j[t]$.
 
 A paired ablation (Table~\ref{tab:decomp}) crossing \{gated, ungated\} $\times$ \{retrieved, random\} reveals that the gate's value is primarily \emph{protective}: on datasets where corrections are inherently reliable, the gate adds little ($-0.3$ to $-0.9$pp); on datasets where corrections are noisy, the gate prevents catastrophic failures (up to $+40$pp). The strongest and most consistent gains come from gated correction with retrieved nearest neighbors, which provides informative auxiliary inputs for series with recurring structure.
 
-A recurrence analysis (\S\ref{sec:recurrence}) shows that window-level autocorrelation is associated with greater retrieval advantage over random windows, suggesting practitioners can determine \emph{a priori} whether building a retrieval index is worth the cost.
+A recurrence analysis (\S\ref{sec:recurrence}) shows that dataset-level recurrence is associated with greater retrieval advantage over random windows, suggesting practitioners can assess \emph{a priori} whether building a retrieval index is worth the cost for a given series.
 
 \textbf{Contributions:}
 \begin{enumerate}
 \item A training-free \textbf{agreement-gated correction mechanism} for TSFMs that applies per-timestep corrections selectively, preventing catastrophic degradation on difficult datasets while preserving gains on favorable ones (\S\ref{sec:method}).
 \item A \textbf{controlled decomposition} of inference-time gains into agreement gating, retrieval relevance, and generic diversity, showing that gating is primarily a safety mechanism and retrieval is conditionally valuable (\S\ref{sec:decomposition}).
-\item Empirical evidence that \textbf{window-level recurrence is associated with greater retrieval advantage}, providing a practical diagnostic for when to invest in retrieval (\S\ref{sec:recurrence}).
+\item Empirical evidence that \textbf{recurrence is useful primarily as a dataset-level diagnostic} for when retrieval provides value beyond generic diversity (\S\ref{sec:recurrence}).
 \end{enumerate}
 
 %===========================================================================
@@ -131,7 +131,7 @@ Traffic & $-36.6$ & $-36.4$ & $+0.2$ & $-135.1$ & $-94.6$ & $\mathbf{+40.5}$ \\
 
 Table~\ref{tab:decomp} reveals three regimes:
 
-\textbf{Regime 1: Diversity suffices (ETTh1, ETTh2, Weather).} Auxiliary forecasts are useful regardless of retrieval: random windows perform comparably to or better than retrieved neighbors (ETTh1: $+9.7\%$ random vs.\ $+7.3\%$ retrieved; ETTh2: $+4.8\%$ vs.\ $+0.8\%$). Generic input diversity---not shape similarity---drives the gains. The gate has a small negative effect ($\Delta_g \approx -0.7$pp) because it occasionally suppresses useful corrections.
+\textbf{Regime 1: Diversity suffices (ETTh1, ETTh2).} Auxiliary forecasts are useful regardless of retrieval: random windows perform comparably to or better than retrieved neighbors (ETTh1: $+9.7\%$ random vs.\ $+7.3\%$ retrieved; ETTh2: $+4.8\%$ vs.\ $+0.8\%$). Generic input diversity---not shape similarity---drives the gains. Weather is a borderline case: random windows produce moderate gains ($+6.4\%$), but retrieval still outperforms them ($+8.5\%$), placing it between Regimes 1 and 2.
 
 \textbf{Regime 2: Retrieval adds value (ETTm1, ETTm2).} Retrieved neighbors clearly outperform random windows (ETTm2: $+4.9\%$ retrieved vs.\ $-0.4\%$ random). Recurring temporal structure makes similar historical windows genuinely informative. Random windows give near-zero or negative improvement because their temporal shapes are misaligned with the series' periodic patterns.
 
@@ -148,7 +148,7 @@ We define the \emph{retrieval advantage} as the difference between gated-retriev
 
 \begin{table}[h]
 \centering
-\caption{Retrieval advantage and recurrence by dataset. Higher recurrence is associated with greater retrieval advantage \emph{across datasets} ($r{=}0.96$, 5 datasets). Within each dataset, the relationship is weaker ($r{\approx}0.1$), indicating recurrence is a dataset-level, not window-level, predictor.}
+\caption{Retrieval advantage and recurrence by dataset. Unlike Table~\ref{tab:decomp}, which reports aggregate MSE improvement, this table measures \emph{average per-window} retrieval advantage, which amplifies failures of random windows on recurrent datasets. Across datasets, higher recurrence is associated with greater retrieval advantage ($r{=}0.96$); within datasets, this association is weak ($r{\approx}0.1$).}
 \label{tab:recurrence}
 \small
 \begin{tabular}{l c c c c}
@@ -228,7 +228,7 @@ The method improves three models from two providers with different architectures
 \section{Conclusion}
 %===========================================================================
 
-We decomposed inference-time TSFM correction into three components: agreement gating, retrieval relevance, and generic diversity. Agreement gating is primarily a safety mechanism, preventing catastrophic degradation on difficult datasets while slightly reducing gains on favorable ones. Retrieval provides the strongest gains when the series has recurring structure; on aperiodic data, generic diversity from random windows suffices. Window-level recurrence predicts which regime applies. The method is training-free at inference time, black-box compatible, and generalizes across model families.
+We decomposed inference-time TSFM correction into three components: agreement gating, retrieval relevance, and generic diversity. Agreement gating is primarily a safety mechanism, preventing catastrophic degradation on difficult datasets while slightly reducing gains on favorable ones. Retrieval provides the strongest gains when the series has recurring structure; on aperiodic data, generic diversity from random windows suffices. Recurrence is a useful dataset-level indicator of whether retrieval is likely to help beyond generic diversity. The method is training-free at inference time, black-box compatible, and generalizes across model families.
 
 \section*{Reproducibility}
 Code at \url{[anonymous]}. \texttt{run\_all.py} reproduces main results (\texttt{seed=42}). Independent reproduction verified exact match.
